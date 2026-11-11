@@ -43,6 +43,25 @@ def select_person(keypoints: np.ndarray, scores: np.ndarray) -> np.ndarray:
     return out
 
 
+def check_device(device: str) -> None:
+    """Fail loudly if a CUDA device is requested but ONNX Runtime cannot use it.
+
+    Without this, onnxruntime quietly runs on the CPU (about 15x slower) and the
+    run looks like it worked.
+    """
+    if not device.startswith("cuda"):
+        return
+    import onnxruntime as ort
+
+    providers = ort.get_available_providers()
+    if "CUDAExecutionProvider" not in providers:
+        raise RuntimeError(
+            f"device={device!r} requested but ONNX Runtime has no CUDAExecutionProvider "
+            f"(available: {', '.join(providers)}). Install onnxruntime-gpu (and remove "
+            "plain onnxruntime) with a matching CUDA/cuDNN, or use --device cpu."
+        )
+
+
 class RTMPoseEstimator(PoseEstimator):
     name = "rtmpose"
 
@@ -52,6 +71,7 @@ class RTMPoseEstimator(PoseEstimator):
         ``model`` lets tests inject a callable returning ``(keypoints, scores)``.
         """
         if model is None:
+            check_device(device)
             try:
                 from rtmlib import Body
             except ImportError as e:  # pragma: no cover

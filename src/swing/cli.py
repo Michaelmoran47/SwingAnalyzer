@@ -176,7 +176,7 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(argv)
     try:
         return args.func(args)
-    except (FileNotFoundError, ValueError, ImportError) as e:
+    except (FileNotFoundError, ValueError, ImportError, RuntimeError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
 

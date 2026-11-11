@@ -61,3 +61,27 @@ def test_estimator_with_injected_model():
 def test_factory_unknown_backend_lists_rtmpose():
     with pytest.raises(ValueError, match="rtmpose"):
         get_estimator("nope")
+
+
+def test_cuda_requested_without_cuda_provider_fails_loudly(monkeypatch):
+    import onnxruntime as ort
+
+    from swing.pose.rtmpose_backend import check_device
+
+    monkeypatch.setattr(ort, "get_available_providers", lambda: ["CPUExecutionProvider"])
+    with pytest.raises(RuntimeError, match="CUDAExecutionProvider"):
+        check_device("cuda")
+    check_device("cpu")  # never raises
+    monkeypatch.setattr(ort, "get_available_providers",
+                        lambda: ["CUDAExecutionProvider", "CPUExecutionProvider"])
+    check_device("cuda")  # fine when available
+
+
+def test_estimator_construction_checks_device(monkeypatch):
+    import onnxruntime as ort
+
+    monkeypatch.setattr(ort, "get_available_providers", lambda: ["CPUExecutionProvider"])
+    with pytest.raises(RuntimeError):
+        RTMPoseEstimator(device="cuda")
+    # an injected model bypasses model loading, so no device check is needed
+    RTMPoseEstimator(device="cuda", model=lambda f: (np.zeros((0, 17, 2)), np.zeros((0, 17))))
