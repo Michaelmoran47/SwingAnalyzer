@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import pytest
 
 from swing.io import probe_video
 from swing.pose import J, PoseSequence, empty_pose
@@ -34,4 +35,4 @@ def test_write_overlay_video(synthetic_video, tmp_path):
     assert write_overlay_video(synthetic_video, seq, out) == 20
     info = probe_video(out)
     assert info.frame_count == 20
-    assert info.fps == 120.0
+    assert info.fps == pytest.approx(120.0)

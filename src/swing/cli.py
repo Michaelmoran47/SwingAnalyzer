@@ -40,6 +40,7 @@ def _cmd_overlay(args: argparse.Namespace) -> int:
     det = int(seq.detected.sum())
     print(f"detected a person in {det}/{len(seq)} frames")
     if args.keypoints:
+        Path(args.keypoints).parent.mkdir(parents=True, exist_ok=True)
         seq.save(args.keypoints)
         print(f"keypoints -> {args.keypoints}")
     out = Path(args.output)

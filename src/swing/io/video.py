@@ -54,28 +54,56 @@ def _open(path: Path) -> cv2.VideoCapture:
 
 
 def probe_video(path: str | Path) -> VideoInfo:
+    """Measure fps and frame count from the decoded stream, not the header.
+
+    iPhone slo-mo headers can disagree with the stream (observed: header said
+    227.8 fps / 1635 frames, the decoded stream was 240 fps / 1551 frames), so
+    we walk every frame with ``grab()`` (no pixel conversion) and use the
+    presentation timestamps.
+    """
     path = Path(path)
     cap = _open(path)
+    warnings: list[str] = []
     try:
-        fps = float(cap.get(cv2.CAP_PROP_FPS))
-        count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        header_fps = float(cap.get(cv2.CAP_PROP_FPS))
+        header_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         ok, frame = cap.read()
         if not ok:
             raise ValueError(f"Could not decode a first frame from {path}")
         height, width = frame.shape[:2]  # decoded size, orientation applied
+        stamps = [cap.get(cv2.CAP_PROP_POS_MSEC)]
+        while cap.grab():
+            stamps.append(cap.get(cv2.CAP_PROP_POS_MSEC))
     finally:
         cap.release()
 
-    warnings: list[str] = []
+    count = len(stamps)
+    fps = 0.0
+    if count > 1 and stamps[-1] > stamps[0]:
+        # Mean rate over the clip; per-frame ms stamps are quantised so a
+        # median of single gaps would be noisy.
+        fps = (count - 1) * 1000.0 / (stamps[-1] - stamps[0])
+        gaps = [b - a for a, b in zip(stamps, stamps[1:])]
+        if max(gaps) > 2.0 * min(g for g in gaps if g > 0):
+            warnings.append(
+                "Frame spacing varies by more than 2x: variable frame rate, "
+                "likely the iPhone slo-mo time ramp. Trim to the full-rate segment."
+            )
+    else:
+        fps = header_fps
+        warnings.append("Could not read frame timestamps; using header fps.")
+    if header_fps > 0 and abs(header_fps - fps) / max(fps, 1e-9) > 0.02:
+        warnings.append(
+            f"Header says {header_fps:.1f} fps / {header_count} frames but the "
+            f"decoded stream is {fps:.1f} fps / {count} frames; using the stream."
+        )
     if fps <= 0:
-        warnings.append("Container reports no frame rate; timestamps unreliable.")
+        warnings.append("No frame rate available; timestamps unreliable.")
     elif fps < MIN_RECOMMENDED_FPS:
         warnings.append(
             f"{fps:.1f} fps is below the recommended {MIN_RECOMMENDED_FPS:.0f}; "
             "was the clip recorded in slo-mo or exported at normal speed?"
         )
-    if count <= 0:
-        warnings.append("Container reports no frame count.")
     return VideoInfo(path, fps, count, width, height, tuple(warnings))
 
 
