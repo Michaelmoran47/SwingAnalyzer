@@ -134,3 +134,15 @@ def test_hand_signal_means_wrists():
     seq = _seq_from_hands(hands)
     seq.keypoints[:, J["right_wrist"], 0] += 100
     np.testing.assert_allclose(hand_signal(seq)[:, 0], hands[:, 0] + 50, atol=1e-3)
+
+
+@pytest.mark.parametrize("seed", range(8))
+def test_address_not_fooled_by_speed_flicker_near_top(seed):
+    """Regression: with noise, hand speed flickers around the 'still' level at the
+    top of the backswing. Address must still be the stillness *before* the backswing,
+    not a flicker frame next to the top (found when benchmarking a second pose backend)."""
+    hands, t = synthetic_hands()
+    noisy = hands + np.random.default_rng(seed).normal(0, 1.0, hands.shape)
+    f = detect_phases_from_hands(noisy, FPS, TORSO).frames
+    assert 0 <= f["address"] - t["start"] <= 0.15 * FPS
+    assert f["address"] < f["takeaway"] < f["top"]

@@ -102,7 +102,9 @@ def _cmd_overlay(args: argparse.Namespace) -> int:
     if args.load_keypoints:
         seq = PoseSequence.load(args.load_keypoints)
     else:
-        with get_estimator(args.backend) as est:
+        kw = ({"device": args.device, "mode": args.rtm_mode}
+              if args.backend == "rtmpose" else {})
+        with get_estimator(args.backend, **kw) as est:
             seq = estimate_video(args.video, est, args.start, args.end, progress)
         print(file=sys.stderr)
 
@@ -135,6 +137,9 @@ def main(argv: list[str] | None = None) -> int:
     po.add_argument("video")
     po.add_argument("-o", "--output", default="outputs/overlay.mp4")
     po.add_argument("--backend", default="mediapipe")
+    po.add_argument("--device", default="cpu", help="rtmpose only: cpu or cuda")
+    po.add_argument("--rtm-mode", default="balanced",
+                    choices=["lightweight", "balanced", "performance"], help="rtmpose model size")
     po.add_argument("--keypoints", help="also save keypoints to this .npz")
     po.add_argument("--start", type=int, default=0, help="first frame index")
     po.add_argument("--end", type=int, default=None, help="end frame index (exclusive)")

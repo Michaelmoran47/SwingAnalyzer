@@ -10,7 +10,7 @@ import numpy as np
 from swing.io import iter_frames, probe_video
 from swing.pose.base import NUM_JOINTS, PoseEstimator, PoseSequence
 
-BACKENDS = ("mediapipe",)  # rtmpose arrives in a later milestone
+BACKENDS = ("mediapipe", "rtmpose")
 
 
 def get_estimator(name: str, **kwargs) -> PoseEstimator:
@@ -18,6 +18,10 @@ def get_estimator(name: str, **kwargs) -> PoseEstimator:
         from swing.pose.mediapipe_backend import MediaPipeEstimator
 
         return MediaPipeEstimator(**kwargs)
+    if name == "rtmpose":
+        from swing.pose.rtmpose_backend import RTMPoseEstimator
+
+        return RTMPoseEstimator(**kwargs)
     raise ValueError(f"Unknown pose backend {name!r}; available: {', '.join(BACKENDS)}")
 
 

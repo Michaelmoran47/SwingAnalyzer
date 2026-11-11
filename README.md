@@ -3,11 +3,12 @@
 Golf swing analysis from phone video: pose estimation → smoothing → phase
 detection → metrics, as a core Python library with a CLI (Streamlit demo planned).
 
-**Status: milestones 0-4 (MediaPipe backend only).** Ingest, skeleton overlay,
+**Status: milestones 0-5.** Ingest, skeleton overlay,
 smoothing, rule-based phase detection and view-aware metrics work and are
 unit-tested. Validation so far is one hand-labelled swing, so nothing here is an
-accuracy result. The RTMPose backend, the Streamlit demo and multi-clip
-validation are not built yet. No results are reported in this README: every
+accuracy result. Both pose backends (MediaPipe, RTMPose) are implemented and
+compared on that clip ([docs/rtmpose.md](docs/rtmpose.md)). The Streamlit demo and
+multi-clip validation are not built yet. No results are reported in this README: every
 number that appears here will come from a script in this repo.
 
 ## Scope
@@ -27,7 +28,7 @@ Python 3.10+.
 ```bash
 python -m venv .venv
 .venv/Scripts/activate          # Windows; use `source .venv/bin/activate` elsewhere
-pip install -e ".[mediapipe,dev]"
+pip install -e ".[mediapipe,rtmpose,dev]"
 ```
 
 MediaPipe pinned to 0.10.21 for the legacy `mp.solutions.pose` API. The default
@@ -73,6 +74,6 @@ pytest
 2. Smoothing ✅ (`--smooth`; effect measured by `scripts/smoothing_report.py`)
 3. Rule-based phase detection ✅ implemented (`swing phases`). Top and impact are scored against hand labels; address, takeaway and finish are threshold-defined, see [docs/phase_definitions.md](docs/phase_definitions.md). Validation so far: one labelled swing, so a sanity check, not an accuracy result
 4. Metrics v1 ✅ implemented and unit-tested, view-aware (`swing metrics`), see [docs/metrics.md](docs/metrics.md). Not validated against reference measurements
-5. RTMPose backend and benchmark
+5. RTMPose backend and benchmark ✅ implemented; compared on one clip, see [docs/rtmpose.md](docs/rtmpose.md) and [docs/benchmark.md](docs/benchmark.md). Not an accuracy ranking
 6. Streamlit demo
 7. Stretch: SwingNet phase model, 3D lifting

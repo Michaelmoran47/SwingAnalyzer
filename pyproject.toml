@@ -19,6 +19,8 @@ dependencies = [
 # models ship in the wheel; the heavy model (complexity 2, our default) is
 # downloaded by MediaPipe on first use.
 mediapipe = ["mediapipe==0.10.21"]
+# CPU runtime. For an NVIDIA GPU install onnxruntime-gpu instead of onnxruntime.
+rtmpose = ["rtmlib>=0.0.13", "onnxruntime>=1.16"]
 plots = ["matplotlib>=3.7"]
 dev = ["pytest>=7"]
 

@@ -12,8 +12,9 @@ so they do not depend on resolution, distance or frame rate.
 2. impact: lowest hand position (max y) within ``impact_window_s`` after the peak.
 3. top: highest hand position (min y) before the peak.
 4. address: last still frame before the backswing, where "still" means speed
-   below ``still_frac`` of peak, scanning back from the top (skipping the slow
-   region around the top itself).
+   below ``still_frac`` of peak. Scanning back from the top, first skip the slow
+   region around the top until speed has risen above ``rise_frac`` of peak
+   (speed flickers near the top, so stillness is only trusted after that).
 5. takeaway: first frame after address where the hands have moved more than
    ``takeaway_disp`` torso lengths from their address position.
 6. finish: first frame after impact where hand speed stays below ``finish_frac``
@@ -36,6 +37,7 @@ from swing.pose.base import J, PoseSequence
 @dataclass(frozen=True)
 class PhaseParams:
     max_gap_s: float = 0.3  # longest hand-signal gap we interpolate
+    rise_frac: float = 0.10  # speed (of peak) the backswing must reach before stillness counts
     still_frac: float = 0.02  # speed (of peak) below which hands count as still
     takeaway_disp: float = 0.05  # torso lengths moved from address position
     impact_window_s: float = 0.20
@@ -135,10 +137,17 @@ def detect_phases_from_hands(
 
     # address: scan back from the top, first out of the (slow) top region, then
     # through the backswing, to the last still frame before the motion began
-    still = np.nan_to_num(speed, nan=np.inf) < p.still_frac * vmax
+    v = np.nan_to_num(speed, nan=np.inf)
+    still = v < p.still_frac * vmax
+    # Leave the top region only once speed has clearly risen (rise_frac of peak).
+    # Speed flickers around the still level near the top, so "first non-still
+    # frame" is not a reliable exit.
     j = top
-    while j > 0 and still[j]:
+    while j > 0 and v[j] < p.rise_frac * vmax:
         j -= 1
+    if v[j] < p.rise_frac * vmax:
+        warn.append("backswing speed never rose clearly above the still level; address not found")
+        return res
     while j > 0 and not still[j]:
         j -= 1
     if not still[j]:
