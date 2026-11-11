@@ -54,10 +54,12 @@ def draw_skeleton(frame: np.ndarray, pose: np.ndarray, min_conf: float = 0.3) ->
 
 
 def write_overlay_video(video: str | Path, seq: PoseSequence, out: str | Path,
-                        min_conf: float = 0.3) -> int:
+                        min_conf: float = 0.3, playback_fps: float | None = None) -> int:
     """Write ``video`` with skeletons drawn for the frames covered by ``seq``.
 
-    Output keeps the source frame rate, so slo-mo clips stay slo-mo.
+    Output keeps the source frame rate unless ``playback_fps`` is given (e.g. 30
+    for smooth playback in players that struggle at 240 fps; every frame is kept,
+    only the playback speed changes).
     Returns the number of frames written.
     """
     writer = None
@@ -68,7 +70,7 @@ def write_overlay_video(video: str | Path, seq: PoseSequence, out: str | Path,
             if writer is None:
                 h, w = frame.shape[:2]
                 writer = cv2.VideoWriter(
-                    str(out), cv2.VideoWriter_fourcc(*"mp4v"), seq.fps, (w, h)
+                    str(out), cv2.VideoWriter_fourcc(*"mp4v"), playback_fps or seq.fps, (w, h)
                 )
                 if not writer.isOpened():
                     raise OSError(f"Could not open {out} for writing")

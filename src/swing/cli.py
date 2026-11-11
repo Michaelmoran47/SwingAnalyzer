@@ -22,7 +22,7 @@ def _cmd_info(args: argparse.Namespace) -> int:
 
 
 def _cmd_overlay(args: argparse.Namespace) -> int:
-    from swing.pose import estimate_video, get_estimator
+    from swing.pose import PoseSequence, estimate_video, get_estimator
     from swing.render import write_overlay_video
 
     info = probe_video(args.video)
@@ -33,9 +33,12 @@ def _cmd_overlay(args: argparse.Namespace) -> int:
         if done % 50 == 0 or done == total:
             print(f"\rpose {done}/{total}", end="", file=sys.stderr, flush=True)
 
-    with get_estimator(args.backend) as est:
-        seq = estimate_video(args.video, est, args.start, args.end, progress)
-    print(file=sys.stderr)
+    if args.load_keypoints:
+        seq = PoseSequence.load(args.load_keypoints)
+    else:
+        with get_estimator(args.backend) as est:
+            seq = estimate_video(args.video, est, args.start, args.end, progress)
+        print(file=sys.stderr)
 
     det = int(seq.detected.sum())
     print(f"detected a person in {det}/{len(seq)} frames")
@@ -45,8 +48,8 @@ def _cmd_overlay(args: argparse.Namespace) -> int:
         print(f"keypoints -> {args.keypoints}")
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
-    n = write_overlay_video(args.video, seq, out, args.min_conf)
-    print(f"overlay ({n} frames @ {seq.fps:g} fps) -> {out}")
+    n = write_overlay_video(args.video, seq, out, args.min_conf, args.playback_fps)
+    print(f"overlay ({n} frames @ {args.playback_fps or seq.fps:g} fps playback) -> {out}")
     return 0 if det else 1
 
 
@@ -65,6 +68,9 @@ def main(argv: list[str] | None = None) -> int:
     po.add_argument("--keypoints", help="also save keypoints to this .npz")
     po.add_argument("--start", type=int, default=0, help="first frame index")
     po.add_argument("--end", type=int, default=None, help="end frame index (exclusive)")
+    po.add_argument("--load-keypoints", help="reuse a saved .npz instead of running pose")
+    po.add_argument("--playback-fps", type=float, default=None,
+                    help="output playback rate (e.g. 30 for smooth slow-mo); default = source fps")
     po.add_argument("--min-conf", type=float, default=0.3)
     po.set_defaults(func=_cmd_overlay)
 
