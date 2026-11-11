@@ -1,0 +1,13 @@
+{
+  "video": "IMG_6004.MOV",
+  "fps": 239.45928548439008,
+  "frame_count": 1551,
+  "labels": {
+    "address": 681,
+    "takeaway": 720,
+    "top": 927,
+    "impact": 995,
+    "finish": 1181
+  },
+  "notes": ""
+}

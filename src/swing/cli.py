@@ -31,6 +31,32 @@ def _cmd_label(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_phases(args: argparse.Namespace) -> int:
+    from swing.labels import PhaseLabels
+    from swing.phases import compare, detect_phases
+    from swing.pose import PoseSequence
+    from swing.smoothing import smooth_sequence
+
+    seq = PoseSequence.load(args.keypoints)
+    if not args.no_smooth:
+        seq = smooth_sequence(seq)
+    res = detect_phases(seq)
+    labels = PhaseLabels.load(args.labels) if args.labels else None
+    rows = {e.phase: e for e in compare(res, labels)} if labels else {}
+    print(f"{'phase':10} {'frame':>6} {'time_s':>7}" + (f" {'label':>6} {'err_fr':>7} {'err_ms':>8}" if labels else ""))
+    for ph, f in res.frames.items():
+        line = f"{ph:10} {'-' if f is None else f:>6} {'-' if f is None else format(f / seq.fps, '.3f'):>7}"
+        if labels:
+            e = rows[ph]
+            line += (f" {'-' if e.labelled is None else e.labelled:>6}"
+                     f" {'-' if e.error_frames is None else format(e.error_frames, '+d'):>7}"
+                     f" {'-' if e.error_ms is None else format(e.error_ms, '+.1f'):>8}")
+        print(line)
+    for w in res.warnings:
+        print(f"warning: {w}")
+    return 0 if all(v is not None for v in res.frames.values()) else 1
+
+
 def _cmd_overlay(args: argparse.Namespace) -> int:
     from swing.pose import PoseSequence, estimate_video, get_estimator
     from swing.render import write_overlay_video
@@ -97,6 +123,12 @@ def main(argv: list[str] | None = None) -> int:
     pl.add_argument("--keypoints", help="optional .npz to show a skeleton (toggle with k)")
     pl.add_argument("--max-height", type=int, default=900, help="window height in px")
     pl.set_defaults(func=_cmd_label)
+
+    pp = sub.add_parser("phases", help="detect swing phases from a RAW keypoints .npz")
+    pp.add_argument("keypoints", help=".npz from `swing overlay --keypoints` (unsmoothed)")
+    pp.add_argument("--labels", help="hand-label JSON to score against")
+    pp.add_argument("--no-smooth", action="store_true", help="input is already smoothed")
+    pp.set_defaults(func=_cmd_phases)
 
     args = p.parse_args(argv)
     try:

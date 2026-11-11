@@ -69,7 +69,7 @@ pytest
 0. Scaffold and capture protocol ✅
 1. Ingest + MediaPipe overlay ✅ (tried on one real clip)
 2. Smoothing ✅ (`--smooth`; effect measured by `scripts/smoothing_report.py`)
-3. Rule-based phase detection, validated against hand labels
+3. Rule-based phase detection, validated against hand labels. Detector implemented (`swing phases`); first check on one labelled swing found top/impact close but address, takeaway and finish disagreeing with the labels, because the rules use wrist motion and the labels reflect the club. Not yet validated; needs more labelled clips and a decision on the definitions
 4. Metrics v1
 5. RTMPose backend and benchmark
 6. Streamlit demo
