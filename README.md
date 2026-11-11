@@ -16,7 +16,7 @@ number that appears here will come from a script in this repo.
 - Capture: iPhone slo-mo (120–240 fps), down-the-line and face-on, right-handed
   golfer. See [docs/capture_protocol.md](docs/capture_protocol.md).
 - Pose backends behind a `PoseEstimator` interface: MediaPipe BlazePose (default,
-  implemented); RTMPose via rtmlib/ONNX (planned, to be benchmarked).
+  implemented); RTMPose via rtmlib/ONNX (implemented, benchmarked on one clip).
 - Planned metrics: tempo, spine angle, head sway, hip slide, early extension, and
   rotation as a labelled 2D proxy (not a true angle).
 - Metrics will be pure functions of keypoints, unit-tested on synthetic skeletons.
