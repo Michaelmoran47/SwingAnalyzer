@@ -10,7 +10,6 @@ dist/
 data/raw/*
 !data/raw/.gitkeep
 data/processed/
-# hand labels are small and are the project's ground truth: tracked
 outputs/
 *.mp4
 *.mov
