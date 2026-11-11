@@ -3,10 +3,12 @@
 Golf swing analysis from phone video: pose estimation → smoothing → phase
 detection → metrics, as a core Python library with a CLI (Streamlit demo planned).
 
-**Status: milestones 0–1.** Video ingest and a skeleton overlay work. Phase
-detection, metrics, and the second pose backend are not built yet. No results or
-accuracy numbers are reported here: every number in this README will come from a
-script in this repo, and none exist yet.
+**Status: milestones 0-4 (MediaPipe backend only).** Ingest, skeleton overlay,
+smoothing, rule-based phase detection and view-aware metrics work and are
+unit-tested. Validation so far is one hand-labelled swing, so nothing here is an
+accuracy result. The RTMPose backend, the Streamlit demo and multi-clip
+validation are not built yet. No results are reported in this README: every
+number that appears here will come from a script in this repo.
 
 ## Scope
 
