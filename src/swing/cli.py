@@ -21,6 +21,16 @@ def _cmd_info(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_label(args: argparse.Namespace) -> int:
+    from swing.label_tool import run
+
+    labels = run(args.video, args.labels, args.keypoints, args.max_height)
+    print(f"labels: {labels.labels}")
+    for msg in labels.problems():
+        print(f"warning: {msg}")
+    return 0
+
+
 def _cmd_overlay(args: argparse.Namespace) -> int:
     from swing.pose import PoseSequence, estimate_video, get_estimator
     from swing.render import write_overlay_video
@@ -80,6 +90,13 @@ def main(argv: list[str] | None = None) -> int:
                     help="Savitzky-Golay window in seconds (default 0.06)")
     po.add_argument("--min-conf", type=float, default=0.3)
     po.set_defaults(func=_cmd_overlay)
+
+    pl = sub.add_parser("label", help="hand-label swing phases frame by frame")
+    pl.add_argument("video")
+    pl.add_argument("--labels", help="label file (default data/labels/<video stem>.json)")
+    pl.add_argument("--keypoints", help="optional .npz to show a skeleton (toggle with k)")
+    pl.add_argument("--max-height", type=int, default=900, help="window height in px")
+    pl.set_defaults(func=_cmd_label)
 
     args = p.parse_args(argv)
     try:

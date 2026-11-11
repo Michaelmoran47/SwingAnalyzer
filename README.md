@@ -36,6 +36,7 @@ heavy model (complexity 2) is downloaded by MediaPipe on first use.
 ```bash
 swing info data/raw/2026-11-11_7i_dtl_01.MOV
 swing overlay data/raw/2026-11-11_7i_dtl_01.MOV -o outputs/overlay.mp4 --keypoints outputs/kps.npz
+swing label data/raw/2026-11-11_7i_dtl_01.MOV   # hand-label phases, see docs/labelling.md
 ```
 
 The overlay keeps the source frame rate, so slo-mo stays slo-mo. Lead (left) side
