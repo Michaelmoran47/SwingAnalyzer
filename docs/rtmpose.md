@@ -71,9 +71,36 @@ The first RTMPose-vs-MediaPipe metric comparison, run before the fix, showed
 apparent sign flips in spine change and hip movement; those were caused by this
 bug and are not real backend differences.
 
+## Performance mode (larger models)
+
+`--rtm-mode performance` uses YOLOX-x and RTMPose-x at 384x288 (368 MB + 184 MB
+download). Run on frames 985-1050 of `IMG_6004` only (the post-impact window):
+
+- **Wrists land on the hands.** By eye on six frames (990, 1000, 1010, 1020,
+  1030, 1045, via `scripts/compare_frames.py`), performance-mode wrists sit on
+  the golfer's hands where balanced mode and MediaPipe put them on the torso.
+  Not quantified against annotations; six frames, one swing.
+- **How far apart the two modes are** (`scripts/compare_keypoint_files.py`, torso
+  = 344 px): wrists differ by a median of about 1.0 torso length (more than 0.5
+  torso apart in 55 and 56 of 65 frames); hips differ by a median of about 0.14
+  to 0.17 torso. The hip difference was not examined, so which mode places the
+  hips better is unknown.
+- **Confidence still does not flag errors.** Performance mode reports 0.96 to
+  1.00 on the wrists; balanced mode reported 0.43 to 0.77 on its wrong ones.
+  Both are SimCC scores, so a fixed `min_conf` is not a reliable filter for
+  either.
+- **Cost on this CPU:** about 1.85 s/frame (0.54 fps; 4-frame ad-hoc timing,
+  not from the benchmark script), roughly 4x slower than balanced. The whole
+  1551-frame clip would take about 48 minutes here. GPU speed is not measured.
+
+Implication: the post-impact wrist failure is a model-capacity problem, not
+something smoothing or thresholds can fix. For wrist-based phase detection and
+metrics, use performance mode (ideally on a GPU) or add a physical plausibility
+check. Whole-clip results for performance mode (phases, metrics) have not been
+computed yet.
+
 ## Open questions
 
-- Does `--rtm-mode performance` (RTMPose-x, 384x288) place the wrists correctly in
-  the post-impact frames? Not tried; large download and slow on CPU.
+- Whole-clip performance-mode phases and metrics (needs a GPU or ~48 CPU minutes).
 - Physical plausibility checks (for example forearm length staying constant)
   could catch confident-but-wrong wrists that confidence misses.

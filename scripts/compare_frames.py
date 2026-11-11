@@ -27,7 +27,16 @@ ap.add_argument("--out", default="outputs/compare_frames.jpg")
 ap.add_argument("--crop-y", type=int, nargs=2, default=[300, 1500])
 a = ap.parse_args()
 
-seqs = [(n, PoseSequence.load(p).keypoints) for n, p in (x.split("=", 1) for x in a.npz)]
+def _full(path):
+    """Keypoints indexed by video frame; frames outside the file's range are NaN."""
+    q = PoseSequence.load(path)
+    n = q.start_frame + len(q)
+    k = np.full((n, 17, 3), np.nan, np.float32)
+    k[q.start_frame:] = q.keypoints
+    return k
+
+
+seqs = [(n, _full(p)) for n, p in (x.split("=", 1) for x in a.npz)]
 cols = [(0, 0, 255), (0, 220, 0)]
 want, tiles = set(a.frames), {}
 for i, f in iter_frames(a.video, min(a.frames), max(a.frames) + 1):
@@ -35,7 +44,7 @@ for i, f in iter_frames(a.video, min(a.frames), max(a.frames) + 1):
         continue
     for (name, k), col, thick in zip(seqs, cols, (3, -1)):
         for jn, r in (("left_wrist", 13), ("right_wrist", 13), ("left_hip", 10), ("right_hip", 10)):
-            x, y, _ = k[i, J[jn]]
+            x, y, _ = k[i, J[jn]] if i < len(k) else (np.nan,) * 3
             if np.isfinite(x):
                 cv2.circle(f, (int(x), int(y)), r, col, thick)
     cv2.putText(f, str(i), (30, 120), cv2.FONT_HERSHEY_SIMPLEX, 3, (255, 255, 0), 6)

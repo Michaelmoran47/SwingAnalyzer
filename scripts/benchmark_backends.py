@@ -58,12 +58,12 @@ def raw_jitter(k, joint):
     return float(np.sqrt((d2 ** 2).sum(axis=1).mean())) if len(d2) else float("nan")
 
 
-def time_backend(name, video, start, n, device):
+def time_backend(name, video, start, n, device, rtm_mode="balanced"):
     from swing.io import iter_frames
     from swing.pose import get_estimator
 
     frames = [f for _, f in iter_frames(video, start, start + n + 1)]
-    kw = {"device": device} if name == "rtmpose" else {}
+    kw = {"device": device, "mode": rtm_mode} if name == "rtmpose" else {}
     with get_estimator(name, **kw) as est:
         est.estimate(frames[0], 0.0)  # warm-up (model init, first-run allocations)
         t = time.perf_counter()
@@ -81,6 +81,7 @@ def main() -> None:
     ap.add_argument("--video", help="needed for --time-frames")
     ap.add_argument("--time-frames", type=int, default=0)
     ap.add_argument("--device", default="cpu", help="device for rtmpose timing")
+    ap.add_argument("--rtm-mode", default="balanced", help="rtmpose model size used for timing; 'should match the keypoints'")
     ap.add_argument("--out", default="docs/benchmark.md")
     a = ap.parse_args()
 
@@ -104,11 +105,11 @@ def main() -> None:
         import onnxruntime as ort
         L += ["## Speed (this machine)", "",
               f"ONNX Runtime providers available: {', '.join(ort.get_available_providers())}; "
-              f"rtmpose device = `{a.device}`. Per-frame time at full video resolution "
+              f"rtmpose device = `{a.device}`, mode = `{a.rtm_mode}`. Per-frame time at full video resolution "
               f"{labels.video}, {a.time_frames} frames after warm-up, starting mid-swing.", "",
               "| backend | s/frame | fps |", "|---|---|---|"]
         for n in seqs:
-            dt = time_backend(n, a.video, 900, a.time_frames, a.device)
+            dt = time_backend(n, a.video, 900, a.time_frames, a.device, a.rtm_mode)
             L.append(f"| {n} | {dt:.3f} | {1 / dt:.1f} |")
         L.append("")
 
