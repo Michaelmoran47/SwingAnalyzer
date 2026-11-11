@@ -58,6 +58,35 @@ def _cmd_phases(args: argparse.Namespace) -> int:
     return 0 if all(v is not None for v in res.frames.values()) else 1
 
 
+def _cmd_metrics(args: argparse.Namespace) -> int:
+    import json
+
+    from swing.metrics import compute_metrics
+    from swing.phases import detect_phases
+    from swing.pose import PoseSequence
+    from swing.smoothing import smooth_sequence
+
+    seq = PoseSequence.load(args.keypoints)
+    if not args.no_smooth:
+        seq = smooth_sequence(seq)
+    phases = detect_phases(seq)
+    rep = compute_metrics(seq, phases, args.view)
+    print(f"view: {args.view}   phases: " + ", ".join(
+        f"{p}={'-' if f is None else f}" for p, f in phases.frames.items()))
+    for name, v in rep.values.items():
+        if v is not None:
+            print(f"  {name:34s} {v:9.3f}")
+    for name, why in rep.unavailable.items():
+        print(f"  {name:34s} unavailable: {why}")
+    if args.json:
+        Path(args.json).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.json).write_text(json.dumps(
+            {"view": rep.view, "phases": phases.frames, "values": rep.values,
+             "unavailable": rep.unavailable}, indent=2) + "\n")
+        print(f"json -> {args.json}")
+    return 0
+
+
 def _cmd_overlay(args: argparse.Namespace) -> int:
     from swing.pose import PoseSequence, estimate_video, get_estimator
     from swing.render import write_overlay_video
@@ -130,6 +159,14 @@ def main(argv: list[str] | None = None) -> int:
     pp.add_argument("--labels", help="hand-label JSON to score against")
     pp.add_argument("--no-smooth", action="store_true", help="input is already smoothed")
     pp.set_defaults(func=_cmd_phases)
+
+    pm = sub.add_parser("metrics", help="compute swing metrics from a RAW keypoints .npz")
+    pm.add_argument("keypoints")
+    pm.add_argument("--view", required=True, choices=["dtl", "fo"],
+                    help="camera view of this clip: down-the-line or face-on")
+    pm.add_argument("--no-smooth", action="store_true", help="input is already smoothed")
+    pm.add_argument("--json", help="also write results to this file")
+    pm.set_defaults(func=_cmd_metrics)
 
     args = p.parse_args(argv)
     try:

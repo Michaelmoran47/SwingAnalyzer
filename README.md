@@ -49,9 +49,9 @@ src/swing/
   io/         video probing and frame iteration
   pose/       PoseEstimator interface, COCO-17 schema, MediaPipe backend
   render/     skeleton overlay
-  smoothing/  (milestone 2)
-  phases/     (milestone 3)
-  metrics/    (milestone 4)
+  smoothing/  gap filling and Savitzky-Golay smoothing
+  phases/     rule-based phase detection and scoring against labels
+  metrics/    tempo, spine angle, head sway, hip slide, hip-toward-ball, rotation proxies
   compare/    (later)
 tests/        pytest; synthetic videos and skeletons, no real footage needed
 data/         raw/ is gitignored; labels/ for hand-labelled phase frames
@@ -70,7 +70,7 @@ pytest
 1. Ingest + MediaPipe overlay ✅ (tried on one real clip)
 2. Smoothing ✅ (`--smooth`; effect measured by `scripts/smoothing_report.py`)
 3. Rule-based phase detection ✅ implemented (`swing phases`). Top and impact are scored against hand labels; address, takeaway and finish are threshold-defined, see [docs/phase_definitions.md](docs/phase_definitions.md). Validation so far: one labelled swing, so a sanity check, not an accuracy result
-4. Metrics v1
+4. Metrics v1 ✅ implemented and unit-tested, view-aware (`swing metrics`), see [docs/metrics.md](docs/metrics.md). Not validated against reference measurements
 5. RTMPose backend and benchmark
 6. Streamlit demo
 7. Stretch: SwingNet phase model, 3D lifting
