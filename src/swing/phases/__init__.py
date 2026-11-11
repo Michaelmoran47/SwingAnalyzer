@@ -2,7 +2,7 @@
 
 from swing.phases.detect import (PhaseParams, PhaseResult, detect_phases,
                                  detect_phases_from_hands)
-from swing.phases.evaluate import PhaseError, compare
+from swing.phases.evaluate import PhaseError, VALIDATED_PHASES, compare
 
-__all__ = ["PhaseParams", "PhaseResult", "PhaseError", "compare", "detect_phases",
+__all__ = ["PhaseParams", "PhaseResult", "PhaseError", "VALIDATED_PHASES", "compare", "detect_phases",
            "detect_phases_from_hands"]

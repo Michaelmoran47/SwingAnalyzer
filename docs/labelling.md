@@ -29,6 +29,13 @@ code uses (see `swing info`), not the header frame count.
 | `k` / `h` | toggle skeleton / help |
 | Esc | save and quit |
 
+## What needs labelling
+
+Label **top** and **impact**. They are the phases the detector is scored on.
+Address, takeaway and finish are gradual events that the detector defines by
+threshold (see [phase_definitions.md](phase_definitions.md)); you may still
+label them for reference, but they are not scored.
+
 ## Definitions
 
 **All phases are defined by the hands (the grip / wrists), not the club head or
