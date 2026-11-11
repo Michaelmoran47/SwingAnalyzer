@@ -31,20 +31,26 @@ code uses (see `swing info`), not the header frame count.
 
 ## Definitions
 
+**All phases are defined by the hands (the grip / wrists), not the club head or
+the body.** The pose model tracks wrists, not the club, and the detector uses
+the wrist trajectory, so the labels have to mean the same thing. Watch the
+golfer's hands and ignore the club head, even when it moves first.
+
 Work with ±1 frame (about 4 ms at 240 fps) in mind: pick a rule and apply it
 the same way each time.
 
-1. **address**: the last frame where the golfer and club are still, just before
-   the takeaway begins.
-2. **takeaway**: the first frame where the club or hands visibly start moving
-   away from the ball.
-3. **top**: the frame where the backswing stops and the downswing begins. The
-   hands reach their highest point and reverse direction.
-4. **impact**: the frame where the club head contacts the ball. If contact
-   falls between two frames, take the later frame (the first where the ball
-   has visibly moved, or the club is past the ball position).
-5. **finish**: the first frame where the follow-through is complete and the
-   golfer holds a stable finish position (hands have stopped rising).
+1. **address**: the last frame where the hands are still before the backswing
+   begins. Slow creeping counts as moving; if the hands are visibly drifting,
+   you are past address.
+2. **takeaway**: the first frame where the hands have clearly moved away from
+   their address position. The club head will already be moving; ignore it.
+3. **top**: the frame where the hands reach their highest point (smallest
+   height in the image) before the downswing.
+4. **impact**: the frame where the club head contacts the ball. If contact falls
+   between two frames, take the later frame. (The one phase read from the ball,
+   because the hands' position there is only a proxy.)
+5. **finish**: the first frame where the hands stop (no longer rising or
+   drifting) in the follow-through, even if the club and body are still settling.
 
 Phases must be in this order with strictly increasing frame numbers; the tool
 flags violations in red.
