@@ -1,0 +1,75 @@
+# SwingAnalyzer
+
+Golf swing analysis from phone video: pose estimation → smoothing → phase
+detection → metrics, as a core Python library with a CLI (Streamlit demo planned).
+
+**Status: milestones 0–1.** Video ingest and a skeleton overlay work. Phase
+detection, metrics, and the second pose backend are not built yet. No results or
+accuracy numbers are reported here: every number in this README will come from a
+script in this repo, and none exist yet.
+
+## Scope
+
+- Capture: iPhone slo-mo (120–240 fps), down-the-line and face-on, right-handed
+  golfer. See [docs/capture_protocol.md](docs/capture_protocol.md).
+- Pose backends behind a `PoseEstimator` interface: MediaPipe BlazePose (default,
+  implemented); RTMPose via rtmlib/ONNX (planned, to be benchmarked).
+- Planned metrics: tempo, spine angle, head sway, hip slide, early extension, and
+  rotation as a labelled 2D proxy (not a true angle).
+- Metrics will be pure functions of keypoints, unit-tested on synthetic skeletons.
+
+## Install
+
+Python 3.10+.
+
+```bash
+python -m venv .venv
+.venv/Scripts/activate          # Windows; use `source .venv/bin/activate` elsewhere
+pip install -e ".[mediapipe,dev]"
+```
+
+MediaPipe pinned to 0.10.21 for the legacy `mp.solutions.pose` API. The default
+heavy model (complexity 2) is downloaded by MediaPipe on first use.
+
+## Usage
+
+```bash
+swing info data/raw/2026-11-11_7i_dtl_01.MOV
+swing overlay data/raw/2026-11-11_7i_dtl_01.MOV -o outputs/overlay.mp4 --keypoints outputs/kps.npz
+```
+
+The overlay keeps the source frame rate, so slo-mo stays slo-mo. Lead (left) side
+is drawn orange, trail (right) side cyan. Low-confidence joints are hidden.
+
+## Layout
+
+```
+src/swing/
+  io/         video probing and frame iteration
+  pose/       PoseEstimator interface, COCO-17 schema, MediaPipe backend
+  render/     skeleton overlay
+  smoothing/  (milestone 2)
+  phases/     (milestone 3)
+  metrics/    (milestone 4)
+  compare/    (later)
+tests/        pytest; synthetic videos and skeletons, no real footage needed
+data/         raw/ is gitignored; labels/ for hand-labelled phase frames
+docs/
+```
+
+## Tests
+
+```bash
+pytest
+```
+
+## Roadmap
+
+0. Scaffold and capture protocol ✅
+1. Ingest + MediaPipe overlay ✅ (not yet exercised on real swing footage)
+2. Smoothing
+3. Rule-based phase detection, validated against hand labels
+4. Metrics v1
+5. RTMPose backend and benchmark
+6. Streamlit demo
+7. Stretch: SwingNet phase model, 3D lifting

@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "swing-analyzer"
+version = "0.1.0"
+description = "Golf swing analysis from phone video: pose estimation, phase detection, and metrics."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "opencv-python>=4.8",
+]
+
+[project.optional-dependencies]
+# Legacy `mp.solutions.pose` API (dropped in newer releases). The lite/full
+# models ship in the wheel; the heavy model (complexity 2, our default) is
+# downloaded by MediaPipe on first use.
+mediapipe = ["mediapipe==0.10.21"]
+dev = ["pytest>=7"]
+
+[project.scripts]
+swing = "swing.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

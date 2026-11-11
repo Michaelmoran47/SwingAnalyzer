@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+build/
+dist/
+
+# Raw video and anything derived from it stays local
+data/raw/*
+!data/raw/.gitkeep
+data/processed/
+outputs/
+*.mp4
+*.mov
+*.MOV
+*.npz
