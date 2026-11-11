@@ -67,7 +67,7 @@ pytest
 
 0. Scaffold and capture protocol ✅
 1. Ingest + MediaPipe overlay ✅ (not yet exercised on real swing footage)
-2. Smoothing
+2. Smoothing ✅ (`--smooth`; effect measured by `scripts/smoothing_report.py`)
 3. Rule-based phase detection, validated against hand labels
 4. Metrics v1
 5. RTMPose backend and benchmark

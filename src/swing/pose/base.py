@@ -72,6 +72,8 @@ class PoseSequence:
     height: int
     backend: str
     start_frame: int = 0
+    # Optional (T, 17) bool: joint position was interpolated, not measured.
+    filled: np.ndarray | None = None
 
     def __len__(self) -> int:
         return self.keypoints.shape[0]
@@ -91,6 +93,8 @@ class PoseSequence:
             backend=self.backend,
             start_frame=self.start_frame,
             joints=np.array(JOINTS),
+            filled=(np.zeros(self.keypoints.shape[:2], bool)
+                    if self.filled is None else self.filled),
         )
 
     @classmethod
@@ -105,4 +109,5 @@ class PoseSequence:
                 height=int(d["height"]),
                 backend=str(d["backend"]),
                 start_frame=int(d["start_frame"]),
+                filled=d["filled"] if "filled" in d.files else None,
             )

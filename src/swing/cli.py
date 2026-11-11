@@ -40,6 +40,10 @@ def _cmd_overlay(args: argparse.Namespace) -> int:
             seq = estimate_video(args.video, est, args.start, args.end, progress)
         print(file=sys.stderr)
 
+    if args.smooth:
+        from swing.smoothing import smooth_sequence
+
+        seq = smooth_sequence(seq, args.min_conf, window_s=args.smooth_window)
     det = int(seq.detected.sum())
     print(f"detected a person in {det}/{len(seq)} frames")
     if args.keypoints:
@@ -71,6 +75,9 @@ def main(argv: list[str] | None = None) -> int:
     po.add_argument("--load-keypoints", help="reuse a saved .npz instead of running pose")
     po.add_argument("--playback-fps", type=float, default=None,
                     help="output playback rate (e.g. 30 for smooth slow-mo); default = source fps")
+    po.add_argument("--smooth", action="store_true", help="fill gaps and smooth keypoints")
+    po.add_argument("--smooth-window", type=float, default=0.06,
+                    help="Savitzky-Golay window in seconds (default 0.06)")
     po.add_argument("--min-conf", type=float, default=0.3)
     po.set_defaults(func=_cmd_overlay)
 

@@ -34,12 +34,17 @@ def _color(a: str, b: str) -> tuple[int, int, int]:
     return _CENTER
 
 
-def draw_skeleton(frame: np.ndarray, pose: np.ndarray, min_conf: float = 0.3) -> np.ndarray:
+def draw_skeleton(frame: np.ndarray, pose: np.ndarray, min_conf: float = 0.3,
+                  filled: np.ndarray | None = None) -> np.ndarray:
     """Draw ``(17, 3)`` keypoints onto ``frame`` in place and return it.
 
-    Joints that are NaN or below ``min_conf`` (and edges touching them) are skipped.
+    Joints that are NaN or below ``min_conf`` (and edges touching them) are skipped,
+    unless ``filled`` marks them as interpolated, in which case they are drawn.
     """
-    ok = np.isfinite(pose[:, :2]).all(axis=1) & (pose[:, 2] >= min_conf)
+    trusted = pose[:, 2] >= min_conf
+    if filled is not None:
+        trusted = trusted | filled
+    ok = np.isfinite(pose[:, :2]).all(axis=1) & trusted
     thick = max(2, round(min(frame.shape[:2]) / 360))
     for a, b in _EDGES:
         ia, ib = J[a], J[b]
@@ -74,7 +79,9 @@ def write_overlay_video(video: str | Path, seq: PoseSequence, out: str | Path,
                 )
                 if not writer.isOpened():
                     raise OSError(f"Could not open {out} for writing")
-            draw_skeleton(frame, seq.keypoints[idx - seq.start_frame], min_conf)
+            i = idx - seq.start_frame
+            draw_skeleton(frame, seq.keypoints[i], min_conf,
+                          None if seq.filled is None else seq.filled[i])
             writer.write(frame)
             n += 1
     finally:
