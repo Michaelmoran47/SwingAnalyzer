@@ -55,6 +55,20 @@ def _open(path: Path) -> cv2.VideoCapture:
     return cap
 
 
+def is_variable_rate(stamps) -> bool:
+    """True if frame spacing varies by more than 2x across the clip (a time ramp).
+
+    Uses the 2nd and 98th percentile of the gaps, so a single odd gap (a dropped or
+    duplicated frame, rounding at the ends) does not count as a variable rate.
+    """
+    gaps = np.diff(np.asarray(stamps, dtype=float))
+    gaps = gaps[gaps > 0]
+    if len(gaps) < 2:
+        return False
+    lo, hi = np.percentile(gaps, [2, 98]) if len(gaps) >= 20 else (gaps.min(), gaps.max())
+    return bool(hi > 2.0 * lo)
+
+
 def probe_video(path: str | Path) -> VideoInfo:
     """Measure fps and frame count from the decoded stream, not the header.
 
@@ -85,8 +99,7 @@ def probe_video(path: str | Path) -> VideoInfo:
         # Mean rate over the clip; per-frame ms stamps are quantised so a
         # median of single gaps would be noisy.
         fps = (count - 1) * 1000.0 / (stamps[-1] - stamps[0])
-        gaps = [b - a for a, b in zip(stamps, stamps[1:])]
-        if max(gaps) > 2.0 * min(g for g in gaps if g > 0):
+        if is_variable_rate(stamps):
             warnings.append(
                 "Frame spacing varies by more than 2x: variable frame rate, "
                 "likely the iPhone slo-mo time ramp. Trim to the full-rate segment."

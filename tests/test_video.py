@@ -89,3 +89,34 @@ def test_frame_cache_rebuilds_from_corrupt_file(synthetic_video, tmp_path):
     _, hit = cached_jpeg_frames(synthetic_video, 0.5, cache)
     assert hit  # and it was repaired
     assert not list(cache.glob("*.tmp"))
+
+
+# ---- variable frame rate detection ------------------------------------------
+
+def test_variable_rate_ignores_a_single_odd_gap():
+    import numpy as np
+
+    from swing.io.video import is_variable_rate
+
+    stamps = np.arange(450) * 33.3
+    stamps[200:] -= 27.0  # one 6 ms gap among 449 (what a screen recording had)
+    assert not is_variable_rate(stamps)
+
+
+def test_variable_rate_detects_a_real_time_ramp():
+    import numpy as np
+
+    from swing.io.video import is_variable_rate
+
+    gaps = np.r_[np.full(300, 4.2), np.full(300, 33.3), np.full(300, 4.2)]  # fast, slow, fast
+    assert is_variable_rate(np.r_[0, np.cumsum(gaps)])
+
+
+def test_constant_rate_and_tiny_inputs_are_not_variable():
+    import numpy as np
+
+    from swing.io.video import is_variable_rate
+
+    assert not is_variable_rate(np.arange(100) * 4.1667)
+    assert not is_variable_rate([0.0, 4.0])
+    assert not is_variable_rate([0.0])
