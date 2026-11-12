@@ -160,8 +160,29 @@ Still one clip, one swing, no ground-truth keypoints.
   - 1040-1090: hands high; the RTMPose markers are on the hands in every frame viewed.
     MediaPipe's right wrist is on the shoulder or upper back in at least frames 1050-1060.
   - Wrist confidence in 1015-1030: RTMPose 0.49-0.81, MediaPipe 0.00-0.15.
-- **Balanced mode was not re-examined** on this machine (no balanced keypoints here), so
-  nothing here says whether performance mode is better than balanced.
+- **Balanced mode and MediaPipe, re-checked with correct frames** (GPU machine, balanced
+  run from frame 0 on CUDA, 2.5 minutes end to end; same 19 frames, 985-1090, by eye,
+  not quantified):
+  - Balanced and performance put the wrist markers in practically the same places in
+    every frame, including the hidden-hand frames 1015-1035 (both on the torso). Over
+    frames 985-1089 the two differ by a median 0.03-0.05 torso lengths at the wrists
+    and at most 0.18 (`scripts/compare_keypoint_files.py`, torso length 344 px taken
+    from that script's usage example, not re-measured; a difference between two
+    estimates, not an error). So on this clip performance mode did not visibly change
+    where the wrists are.
+  - MediaPipe differs more: median 0.05-0.10 torso lengths from the RTMPose runs, at
+    most 0.47. By eye its markers are off the hands at about 1005-1010 (left wrist
+    near the hip, ahead of the hands) and its right wrist is on the upper back at
+    1050-1060, while both RTMPose modes are on or next to the hands. Its wrist
+    confidence in 1010-1040 is 0.00-0.17, so for once its confidence did flag the
+    problem; from 1065 on it is on the hands.
+  - Nothing here says performance mode is better than balanced; the evidence is that on
+    this clip they agree, and both agree more with each other than with MediaPipe. That
+    is agreement, not accuracy: the hidden-hand frames cannot be judged by eye, and
+    there are no ground-truth keypoints.
+  - Balanced on the GPU gave the same phases as the laptop CPU run (top 919, impact
+    996) and metrics within 0.06 degrees on spine angles (for example spine angle at
+    impact 32.925 vs 32.868), consistent with GPU/CPU numerical differences.
 - **Phases** (`swing phases`, only top and impact scored against your labels; MediaPipe
   and balanced columns are from [benchmark.md](benchmark.md), full-clip runs):
 
@@ -202,8 +223,8 @@ tell you when a wrist is wrong.
 
 - Whether the wrist markers in the hidden-hand frames (about 1015-1035) are where the
   hands are. Needs a clearer view (a different camera angle) or hand-annotated keypoints.
-- Re-do the balanced-mode and MediaPipe wrist checks with correct frames; the earlier
-  ones are withdrawn above.
+- Hand-annotated wrist positions on a few frames would turn the by-eye checks above into
+  a measured distance (planned next).
 - Physical plausibility checks (for example forearm length staying constant)
   could catch confident-but-wrong wrists that confidence misses.
 - More labelled swings, ideally with better light or a faster shutter, to say anything
