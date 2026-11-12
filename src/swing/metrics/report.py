@@ -74,24 +74,35 @@ def compute_metrics(seq: PoseSequence, phases: PhaseResult, view: str) -> Metric
     k, fps = seq.keypoints, seq.fps
     fr = {p: (None if f is None else f - seq.start_frame) for p, f in phases.frames.items()}
 
-    note = f" ({phases.warnings[0]})" if phases.warnings else ""
+    note = f" ({phases.warnings[-1]})" if phases.warnings else ""
     for name, v in tempo(fr, fps).items():
-        if v is None:
+        if not phases.plausible:
+            # durations that cannot belong to a real-time swing (a slowed clip, or a detection
+            # that went wrong): any time-based value would be wrong, so none is reported
+            rep.skip([name], phases.warnings[-1] if phases.warnings
+                     else "the timings do not look like a real-time swing")
+        elif v is None:
             rep.skip([name], "needs takeaway, top and impact, in that order" + note)
         else:
             rep.put(name, v)
+    present = [fr[p] for p in ("address", "takeaway", "top", "impact", "finish") if fr.get(p) is not None]
+    out_of_order = any(b <= a for a, b in zip(present, present[1:]))
 
     spine_names = ["spine_angle_address_deg", "spine_angle_top_deg",
                    "spine_angle_impact_deg", "spine_angle_change_to_impact_deg"]
     needed = [fr.get("address"), fr.get("top"), fr.get("impact")]
-    if None in needed:
-        rep.skip(spine_names, "needs address, top and impact" + note)
+    if None in needed or out_of_order:
+        # phases missing, or out of order (the detection itself failed): positions at "top" or
+        # "impact" would be taken from the wrong frames
+        why = ("the detected phases are out of order" if out_of_order else "needs address, top and impact") + (
+            f": {phases.warnings[-1]}" if phases.warnings and out_of_order else note)
+        rep.skip(spine_names, why)
         view_names = {"dtl": ["hip_toward_ball_top_torso", "hip_toward_ball_impact_torso"],
                       "fo": ["hip_slide_top_torso", "hip_slide_impact_torso",
                              "head_sway_top_torso", "head_sway_impact_torso",
                              "head_sway_max_excursion_torso",
                              "shoulder_turn_proxy_top_deg", "hip_turn_proxy_top_deg"]}[view]
-        rep.skip(view_names, "needs address, top and impact" + note)
+        rep.skip(view_names, why)
         return rep
     a, top, imp = needed
 

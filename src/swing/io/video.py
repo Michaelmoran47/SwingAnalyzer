@@ -116,8 +116,10 @@ def probe_video(path: str | Path) -> VideoInfo:
         warnings.append("No frame rate available; timestamps unreliable.")
     elif fps < MIN_RECOMMENDED_FPS:
         warnings.append(
-            f"{fps:.1f} fps is below the recommended {MIN_RECOMMENDED_FPS:.0f}; "
-            "was the clip recorded in slo-mo or exported at normal speed?"
+            f"{fps:.1f} fps: phase times will be good to about one frame ({1000 / fps:.0f} ms); "
+            f"{MIN_RECOMMENDED_FPS:.0f}+ fps gives finer timing. If this was recorded in slo-mo and "
+            "re-timed to play slowly, the swing will look several seconds long: give the capture "
+            "frame rate (CLI --fps; demo control)."
         )
     return VideoInfo(path, fps, count, width, height, tuple(warnings))
 

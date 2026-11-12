@@ -43,9 +43,14 @@ class PhaseParams:
     impact_window_s: float = 0.20
     finish_frac: float = 0.10
     finish_hold_s: float = 0.15
-    # The rules use windows of tens of milliseconds and a 60 ms smoother; below this frame
-    # rate they cover only a frame or two and the results are not meaningful.
-    min_fps: float = 100.0
+    # Lowest frame rate checked (scripts/framerate_sweep.py: 240 fps keypoints subsampled to
+    # 15 fps still gave top and impact within one frame interval of the hand labels). Below
+    # it detection is not attempted.
+    min_fps: float = 15.0
+    # Believable durations for a real-time swing. Deliberately wide: they exist to catch a
+    # clip that was slowed down (or a detection that went wrong), not to judge a swing.
+    backswing_range_s: tuple[float, float] = (0.2, 3.0)  # takeaway to top
+    downswing_range_s: tuple[float, float] = (0.08, 1.5)  # top to impact
 
 
 @dataclass
@@ -53,6 +58,7 @@ class PhaseResult:
     frames: dict[str, int | None]
     fps: float
     warnings: list[str] = field(default_factory=list)
+    plausible: bool = True  # False when the detected timings do not look like a real-time swing
 
     def time_s(self, phase: str) -> float | None:
         f = self.frames.get(phase)
@@ -111,6 +117,7 @@ def detect_phases_from_hands(
             f"frame rate {fps:.1f} fps is below {p.min_fps:.0f}, so phases were not detected. "
             "If the clip was recorded in slo-mo and re-timed to play slowly, give the capture "
             "frame rate (CLI --fps; in the demo, the 'Capture frame rate' control)")
+        res.plausible = False
         return res
 
     finite = np.isfinite(hands).all(axis=1)
@@ -183,7 +190,41 @@ def detect_phases_from_hands(
     else:
         warn.append("hands never settled after impact; finish not found "
                     "(missing keypoints at the end of the clip?)")
+    issues = plausibility_issues(frames, fps, p)
+    if issues:
+        res.plausible = False
+        warn.append(
+            "these timings do not look like a real-time swing (" + "; ".join(issues) + "). If the clip "
+            "was recorded in slow motion and re-timed to play slowly, give the capture frame rate "
+            "you recorded at (CLI --fps; in the demo, the 'Capture frame rate' control)")
     return res
+
+
+def plausibility_issues(frames: dict[str, int | None], fps: float,
+                        params: PhaseParams = PhaseParams()) -> list[str]:
+    """Reasons the detected phases cannot be a real-time swing; empty if they look fine.
+
+    Catches phases out of order or sharing a frame, and backswing/downswing durations
+    outside ``params.*_range_s``. A clip slowed down several times fails these.
+    """
+    order = ["address", "takeaway", "top", "impact", "finish"]
+    present = [(n, frames[n]) for n in order if frames.get(n) is not None]
+    issues = []
+    if any(b <= a for (_, a), (_, b) in zip(present, present[1:])):
+        issues.append("phases are out of order or share a frame: "
+                      + ", ".join(f"{n} {f}" for n, f in present))
+    t, top, imp = frames.get("takeaway"), frames.get("top"), frames.get("impact")
+    if t is not None and top is not None and top > t:
+        b = (top - t) / fps
+        lo, hi = params.backswing_range_s
+        if not lo <= b <= hi:
+            issues.append(f"backswing {b:.2f} s is outside {lo}-{hi} s")
+    if top is not None and imp is not None and imp > top:
+        d = (imp - top) / fps
+        lo, hi = params.downswing_range_s
+        if not lo <= d <= hi:
+            issues.append(f"downswing {d:.2f} s is outside {lo}-{hi} s")
+    return issues
 
 
 def detect_phases(seq: PoseSequence, params: PhaseParams = PhaseParams()) -> PhaseResult:

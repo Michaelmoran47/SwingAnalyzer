@@ -44,14 +44,48 @@ Consequences to keep in mind:
 - The rule parameters were set from first principles, not tuned to any clip.
   Changing them changes these phases and any metric built on them.
 
-## Minimum frame rate
+## Frame rate and slowed-down clips
 
-The rules use windows of tens of milliseconds (0.2 s after the peak for impact, a 0.15 s hold
-for finish, a 60 ms smoother) and were built on 240 fps footage. Below 100 fps
-(`PhaseParams.min_fps`) detection returns no phases and a warning instead of guessing. On a
-30 fps re-timed clip, an earlier version ran anyway and put top and impact on the same frame.
-Telling the detector the real capture rate fixes the time base (`--fps`); it does not make
-the rules valid for a clip that was genuinely captured at 30 fps, which is not supported.
+Two different problems look alike and need different handling.
+
+**A genuinely low frame rate** (a normal 30 or 60 fps phone video). The rules cope.
+`scripts/framerate_sweep.py` keeps every k-th frame of the 240 fps keypoints of `IMG_6004`
+(every possible offset), runs smoothing and phase detection, and scores top and impact against
+your hand labels. Error = detected minus label, in ms (min / median / max over the offsets);
+phases were found at every offset and rate.
+
+| fps | 1 frame | top, MediaPipe | impact, MediaPipe | top, RTMPose balanced | impact, RTMPose balanced |
+|---|---|---|---|---|---|
+| 239.5 | 4.2 ms | -13 / -13 / -13 | +17 / +17 / +17 | -13 / -13 / -13 | +4 / +4 / +4 |
+| 119.7 | 8.4 ms | -21 / -19 / -17 | +17 / +19 / +21 | -13 / -10 / -8 | +4 / +6 / +8 |
+| 59.9 | 16.7 ms | -21 / -15 / -8 | 0 / +23 / +29 | -29 / -13 / -4 | -4 / +2 / +8 |
+| 29.9 | 33.4 ms | -29 / -15 / 0 | 0 / +15 / +29 | -25 / -6 / +17 | -13 / +2 / +17 |
+| 23.9 | 41.8 ms | -38 / -19 / 0 | -4 / +15 / +33 | -29 / -6 / +17 | -21 / -2 / +17 |
+| 20.0 | 50.1 ms | -42 / -19 / +4 | -21 / +2 / +25 | -33 / -10 / +13 | -21 / +2 / +25 |
+| 15.0 | 66.8 ms | -46 / -15 / +17 | -25 / +6 / +38 | -38 / -6 / +25 | -33 / -2 / +29 |
+
+So the error stays within about one frame interval down to 15 fps, which is why
+`PhaseParams.min_fps` is 15 and detection is not attempted below it. **This is optimistic.**
+The keypoints came from sharp 240 fps frames; real 30 fps video has longer exposures, more
+motion blur at the fast part of the swing, and worse pose estimates there. It is also one swing
+with one set of labels, so it shows how the rules behave with fewer samples, not how accurate
+they are in general. The finish rule (a 0.15 s hold below a speed threshold) is only a few frames
+at 30 fps and was seen to fire right after impact on one low-rate clip; it is not scored.
+
+**A time-stretched clip**: a high-frame-rate capture re-timed to play slowly, for example 240 fps
+footage stamped as 30 fps (the first re-timed upload, `IMG_6003`). The swing then spans about 8x
+more frames than a real-time swing, the millisecond-scale windows become a few frames, and an
+earlier version put top and impact on the same frame without saying so. Now:
+
+- `plausibility_issues` checks the result: phases must be in order and not share a frame,
+  the backswing (takeaway to top) must last 0.2 to 3.0 s and the downswing (top to impact) 0.08
+  to 1.5 s. The ranges are wide on purpose, they exist to catch a slowed clip or a failed
+  detection, not to judge a swing. They are assumptions about swings, not measured here.
+- When the check fails, the result is flagged (`PhaseResult.plausible`), a warning says what is
+  wrong and how to give the capture rate (`--fps`, or the demo's control), and all time-based
+  metrics are withheld. Geometry metrics are also withheld if the phases are out of order.
+- A slowed clip whose slowdown is modest (say 2x) can still pass these ranges. The check is a
+  safety net, not proof that the timeline is real.
 
 ## Visual re-check with corrected frames
 

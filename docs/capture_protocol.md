@@ -82,28 +82,37 @@ JSON per clip, added in milestone 3).
   normal speed or the ramp has been flattened; real-time metrics such as tempo
   would be wrong, so re-export it.
 
-## Clips that lose their real timeline
+## Any video, and clips that lose their real timeline
 
-Everything time-based (phases, tempo, smoothing windows) assumes the file's frame
-timestamps are real time. A slo-mo clip can be saved or exported **re-timed to play slowly**,
-for example 240 fps footage stamped as 30 fps. Then the swing takes seconds instead of
-about one second, and `swing info` reports about 30 fps even though the pixels came from a
-240 fps capture.
+The pipeline accepts ordinary phone video, not only slo-mo. Frame rate decides how precisely
+phase times can be placed, not whether the picture is good enough:
 
-How to tell: `swing info <clip>` reports a frame rate below 100, or the whole clip is far
-longer than the swing (a backswing that takes several seconds is the giveaway).
+| Capture | What to expect |
+|---|---|
+| 120-240 fps slo-mo | Best. Phase times good to about 4-8 ms. |
+| 30-60 fps normal video | Works. Phase times good to about one frame (17-33 ms); the downswing is only about 8 frames at 30 fps. Pose estimates on blurred frames are less reliable, and that was not tested on real 30 fps footage. |
+| Below 15 fps | Not attempted. |
 
-What the project does about it:
+Everything time-based assumes the file's timestamps are real time. A slo-mo clip can be saved
+or exported **re-timed to play slowly**, for example 240 fps footage stamped as 30 fps. Then the
+swing takes seconds instead of about a second and `swing info` reports about 30 fps even though
+the pixels came from a 240 fps capture. A screen recording of a slow-motion player has the same
+problem, with an unknown slowdown.
 
-- Phase detection **refuses to run below 100 fps** and says so, rather than returning
-  numbers (what happened on the first re-timed upload: top and impact on the same frame).
+How the project handles it (details in [phase_definitions.md](phase_definitions.md)):
+
+- After detecting phases it checks they could belong to a real-time swing. If not, it warns,
+  withholds time-based metrics, and says how to give the capture rate.
 - If you know the capture rate, give it: `swing phases clip.npz --fps 240`,
-  `swing metrics clip.npz --view dtl --fps 240`, or the demo's **Capture frame rate**
-  control. The keypoints are per frame, so only the time base changes. This is your claim
-  about the clip and cannot be checked from the file: if it is wrong, every time and tempo
-  is wrong.
-- Better: keep the original file. AirDrop or copy the original `.MOV` from Photos rather
-  than an exported or shared copy, and re-run `swing info` on it.
+  `swing metrics clip.npz --view dtl --fps 240`, or the demo's **Capture frame rate** control.
+  The keypoints are per frame, so only the time base changes. This is your claim about the clip
+  and cannot be checked from the file: if it is wrong, every time and tempo is wrong.
+- Better: keep the original file. Copy the original `.MOV` from the phone (USB import, or AirDrop
+  with All Photos Data) rather than an exported or shared copy, and run `swing info` on it.
+
+Also assumed: one swing per clip (with several, the strongest is analysed), the golfer
+mostly in frame, and a down-the-line or face-on camera; an angled camera makes view-dependent
+metrics unreliable and nothing checks for that yet.
 
 ## Known limitations
 

@@ -46,14 +46,18 @@ seconds (reading the video's frame timestamps still takes a moment). The cache i
 on the file's path, size and modification time, so replacing the video rebuilds it; a
 damaged cache file is rebuilt automatically. It is safe to delete the folder at any time.
 
-## Capture frame rate
+## Frame rate
 
-The sidebar has a **Capture frame rate** control, by default the rate stamped in the file.
-Below 100 fps the page shows an error and computes no phases or metrics (see
-[capture_protocol.md](capture_protocol.md#clips-that-lose-their-real-timeline)). If you
-know the clip was recorded in slo-mo and re-timed to play slowly, choose 240 or 120; the
-page then says that all timings assume that rate and that this is your claim. The chosen
-rate is also used for the times shown on the Frames tab and the plot.
+Any frame rate from 15 fps up works; the page shows what one frame is in milliseconds at low
+rates (phase times are only good to about one frame). If the detected timings cannot belong to a
+real-time swing, the page shows **"The phase timings look wrong"** and withholds tempo and the
+other time-based metrics. That usually means the clip was slowed down (see
+[capture_protocol.md](capture_protocol.md#any-video-and-clips-that-lose-their-real-timeline)).
+
+The sidebar **Capture frame rate** control (default: the rate stamped in the file) lets you say
+the clip was recorded at 240 or 120 fps and re-timed to play slowly. The page then says all
+timings assume that rate and that this is your claim. The chosen rate is also used for the times
+on the Frames tab and the plot. Below 15 fps nothing is computed.
 
 ## What the page says about trust
 
