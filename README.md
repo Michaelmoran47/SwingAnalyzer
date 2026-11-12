@@ -19,6 +19,7 @@ number that appears here will come from a script in this repo.
   implemented); RTMPose via rtmlib/ONNX (implemented, benchmarked on one clip).
 - Planned metrics: tempo, spine angle, head sway, hip slide, early extension, and
   rotation as a labelled 2D proxy (not a true angle).
+- Impact can be refined from the ball leaving the tee ([docs/impact_cue.md](docs/impact_cue.md)), since wrist tracking alone can be several frames off.
 - Metrics will be pure functions of keypoints, unit-tested on synthetic skeletons.
 
 ## Install
