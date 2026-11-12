@@ -138,16 +138,31 @@ class ClipEntry:
     labels: Path | None
 
 
+def _belongs_to(npz_stem: str, video_stem: str) -> bool:
+    return npz_stem == video_stem or npz_stem.startswith(video_stem + "_")
+
+
 def find_clips(raw_dir: str | Path, out_dir: str | Path, labels_dir: str | Path) -> list[ClipEntry]:
-    """Videos in ``raw_dir`` with the keypoint files in ``out_dir`` that start with the stem."""
+    """Videos in ``raw_dir`` with their keypoint files from ``out_dir``.
+
+    A keypoint file belongs to a video when its name is ``<stem>.npz`` or
+    ``<stem>_<anything>.npz``. When several videos match (``swing`` and ``swing_2``),
+    the file goes to the one with the longest name, so ``swing_2.npz`` is never
+    offered for ``swing``.
+    """
     raw, out, lab = Path(raw_dir), Path(out_dir), Path(labels_dir)
+    videos = [v for v in (sorted(raw.glob("*")) if raw.is_dir() else [])
+              if v.suffix.lower() in VIDEO_SUFFIXES]
+    npzs = sorted(out.glob("*.npz")) if out.is_dir() else []
     entries = []
-    for v in sorted(raw.glob("*")) if raw.is_dir() else []:
-        if v.suffix.lower() not in VIDEO_SUFFIXES:
-            continue
-        kps = tuple(sorted(out.glob(f"{v.stem}*.npz"))) if out.is_dir() else ()
+    for v in videos:
+        mine = tuple(
+            n for n in npzs
+            if _belongs_to(n.stem, v.stem)
+            and max((o.stem for o in videos if _belongs_to(n.stem, o.stem)), key=len) == v.stem
+        )
         label = lab / f"{v.stem}.json"
-        entries.append(ClipEntry(v, kps, label if label.exists() else None))
+        entries.append(ClipEntry(v, mine, label if label.exists() else None))
     return entries
 
 
@@ -189,3 +204,56 @@ def usable_keypoint_files(paths, frame_count: int) -> tuple[list[KeypointFile], 
         else:
             ok.append(k)
     return ok, skipped
+
+
+def safe_clip_name(name: str) -> str:
+    """File-name stem from user text: letters, digits, dot, dash, underscore only."""
+    import re
+
+    stem = re.sub(r"[^A-Za-z0-9._-]+", "_", Path(name).stem.strip()).strip("._")
+    return stem
+
+
+def save_upload(video: str | Path, seq: PoseSequence, name: str,
+                raw_dir: str | Path, out_dir: str | Path) -> tuple[Path, Path]:
+    """Keep an analysed upload: copy the video to ``raw_dir`` and save raw keypoints to ``out_dir``.
+
+    After this the clip shows up under "Saved analysis". Never overwrites: raises
+    ``FileExistsError`` (naming the file) if either destination exists, before anything
+    is written. If the second write fails the first is removed, so no half-saved clip
+    is left behind. Returns ``(video_path, keypoints_path)``.
+    """
+    import os
+    import shutil
+
+    video, raw, out = Path(video), Path(raw_dir), Path(out_dir)
+    stem = safe_clip_name(name)
+    if not stem:
+        raise ValueError("Give the clip a name using letters or digits.")
+    v_dest = raw / f"{stem}{video.suffix.lower()}"
+    k_dest = out / f"{stem}.npz"
+    for d in (v_dest, k_dest):
+        if d.exists():
+            raise FileExistsError(f"{d} already exists; choose a different name.")
+    # a different video extension with the same stem would also collide in the demo's pairing
+    for other in raw.glob(f"{stem}.*"):
+        if other.suffix.lower() in VIDEO_SUFFIXES:
+            raise FileExistsError(f"{other} already exists; choose a different name.")
+    raw.mkdir(parents=True, exist_ok=True)
+    out.mkdir(parents=True, exist_ok=True)
+    tmp_v = v_dest.with_name(v_dest.name + ".tmp")
+    tmp_k = k_dest.with_name(k_dest.name + ".tmp.npz")
+    try:
+        shutil.copyfile(video, tmp_v)
+        seq.save(tmp_k)
+        os.replace(tmp_v, v_dest)
+        try:
+            os.replace(tmp_k, k_dest)
+        except Exception:
+            v_dest.unlink(missing_ok=True)  # roll back the video
+            raise
+    finally:
+        tmp_v.unlink(missing_ok=True)
+        tmp_k.unlink(missing_ok=True)
+    return v_dest, k_dest
+

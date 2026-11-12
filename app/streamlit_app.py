@@ -15,9 +15,9 @@ from pathlib import Path
 
 import streamlit as st
 
-from swing.demo import (analyze, find_clips, hand_figure, metric_table,
-                        overlay_rgb, phase_table, usable_keypoint_files)
-from swing.io import cached_jpeg_frames, probe_video
+from swing.demo import (analyze, find_clips, hand_figure, metric_table, overlay_rgb, phase_table,
+                        safe_clip_name, save_upload, usable_keypoint_files)
+from swing.io import cached_jpeg_frames, load_jpeg_frames, probe_video, store_jpeg_frames
 from swing.labels import PHASES, PhaseLabels
 from swing.pose import J, PoseSequence
 
@@ -38,9 +38,10 @@ def cached_probe(path: str, mtime: float):
 
 @st.cache_resource(show_spinner="Loading frames. A clip's first time decodes them and saves a cache "
                                 "(about 1.5 minutes for a 1551-frame clip); later launches are quick...")
-def cached_frames(path: str, mtime: float, scale: float):
-    frames, _ = cached_jpeg_frames(path, scale, CACHE)
-    return frames
+def cached_frames(path: str, mtime: float, scale: float, persist: bool):
+    if persist:  # clips kept on disk: also save the frames for the next launch
+        return cached_jpeg_frames(path, scale, CACHE)[0]
+    return load_jpeg_frames(path, scale)  # uploads live in a temp folder: no disk cache
 
 
 @st.cache_data
@@ -107,6 +108,28 @@ def pick_upload():
     return state
 
 
+def save_panel(data, jpegs, scale):
+    """Let the user keep an analysed upload so it appears under "Saved analysis"."""
+    st.sidebar.divider()
+    st.sidebar.markdown("**Keep this analysis**")
+    if data.get("saved_as"):
+        st.sidebar.success(f"Saved as `{data['saved_as']}`. Choose *Saved analysis* above to open it any time.")
+        return
+    name = st.sidebar.text_input("Save as", value=safe_clip_name(Path(data["video"]).name),
+                                 key=f"save_name_{data['dir']}")
+    st.sidebar.caption(f"Copies the video to `{RAW}/` and the keypoints to `{OUT}/` on this machine. "
+                       "Nothing is overwritten.")
+    if st.sidebar.button("Save clip and keypoints"):
+        try:
+            video, _ = save_upload(data["video"], data["seq"], name, RAW, OUT)
+            store_jpeg_frames(video, scale, CACHE, jpegs)  # frames are already decoded: no second pass
+        except (FileExistsError, ValueError, OSError) as e:
+            st.sidebar.error(str(e))
+            return
+        data["saved_as"] = video.stem
+        st.rerun()
+
+
 # ---------------------------------------------------------------- page
 
 st.title("Swing Analyzer")
@@ -135,7 +158,10 @@ for w in info.warnings:
     st.caption(f"video: {w}")
 a = analyze(seq, view, window_s, min_conf, data["labels"])
 scale = min(1.0, IMG_HEIGHT / info.height)
-jpegs = cached_frames(str(data["video"]), _mtime(data["video"]), scale)
+jpegs = cached_frames(str(data["video"]), _mtime(data["video"]), scale, mode == "Saved analysis")
+
+if mode == "Upload a video":
+    save_panel(data, jpegs, scale)
 
 st.caption(f"{data['source']} | backend: **{data['backend']}** | {info.width}x{info.height}, "
            f"{info.fps:.1f} fps, {info.frame_count} frames | view: **{view}**")

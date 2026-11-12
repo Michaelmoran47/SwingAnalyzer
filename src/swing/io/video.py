@@ -154,6 +154,34 @@ def _cache_key(path: Path, scale: float, quality: int) -> str:
     return hashlib.sha1(raw.encode()).hexdigest()[:16]
 
 
+def store_jpeg_frames(
+    path: str | Path, scale: float, cache_dir: str | Path, frames: list[bytes], quality: int = 90
+) -> Path:
+    """Write already-decoded ``frames`` of ``path`` into the cache (what ``cached_jpeg_frames`` reads).
+
+    Lets a caller that decoded a clip some other way (for example an upload that was
+    analysed from a temporary file) register it under the file's final location without
+    decoding again. Removes entries for the same video name with a different key.
+    """
+    import numpy as np
+
+    path, cache_dir = Path(path), Path(cache_dir)
+    entry = cache_dir / f"{path.stem}_{_cache_key(path, scale, quality)}.frames.npz"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    offsets = np.cumsum([0] + [len(f) for f in frames]).astype(np.int64)
+    tmp = entry.with_name(entry.name + f".{os.getpid()}.tmp")
+    try:
+        with open(tmp, "wb") as fh:  # file handle: np.savez would append ".npz" to a name
+            np.savez(fh, data=np.frombuffer(b"".join(frames), np.uint8), offsets=offsets)
+        os.replace(tmp, entry)  # atomic: readers never see a half-written file
+    finally:
+        tmp.unlink(missing_ok=True)
+    for old in cache_dir.glob(f"{path.stem}_*.frames.npz"):
+        if old != entry:
+            old.unlink(missing_ok=True)
+    return entry
+
+
 def cached_jpeg_frames(
     path: str | Path, scale: float, cache_dir: str | Path, quality: int = 90
 ) -> tuple[list[bytes], bool]:
@@ -178,17 +206,6 @@ def cached_jpeg_frames(
         except Exception:
             pass  # corrupt or truncated: rebuild below
     frames = load_jpeg_frames(path, scale, quality=quality)
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    offsets = np.cumsum([0] + [len(f) for f in frames]).astype(np.int64)
-    tmp = entry.with_name(entry.name + f".{os.getpid()}.tmp")
-    try:
-        with open(tmp, "wb") as fh:  # file handle: np.savez would append ".npz" to a name
-            np.savez(fh, data=np.frombuffer(b"".join(frames), np.uint8), offsets=offsets)
-        os.replace(tmp, entry)  # atomic: readers never see a half-written file
-    finally:
-        tmp.unlink(missing_ok=True)
-    for old in cache_dir.glob(f"{path.stem}_*.frames.npz"):
-        if old != entry:
-            old.unlink(missing_ok=True)
+    store_jpeg_frames(path, scale, cache_dir, frames, quality)
     return frames, False
 

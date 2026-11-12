@@ -23,9 +23,21 @@ Show more options, then Send to, then Desktop (create shortcut).
   covering the whole clip are offered; already-smoothed and partial files are skipped
   with the reason shown. Hand labels from `data/labels/<clip>.json` are used if present.
 - **Upload a video.** Runs MediaPipe on the uploaded file, on this machine (about 15
-  frames per second on a laptop CPU; a 240 fps clip takes a couple of minutes). The file
-  is kept only in a temporary folder for the session. RTMPose is not offered here: use
-  the CLI, then pick the saved analysis.
+  frames per second on a laptop CPU; a 240 fps clip takes a couple of minutes). RTMPose
+  is not offered here: use the CLI, then pick the saved analysis. By default nothing is
+  kept: the video sits in a temporary folder and the keypoints live in the page session,
+  so they are lost when you restart the server.
+  - **Keep this analysis.** After an upload is analysed, the sidebar offers a name and a
+    **Save clip and keypoints** button. It copies the video to `data/raw/` and the raw
+    keypoints to `outputs/` (and stores the decoded frames in the cache, so no second
+    decode), after which the clip appears under *Saved analysis* and opens quickly.
+    Nothing is saved unless you press it. It never overwrites: if the name is taken
+    (any video extension, or an existing keypoint file) it says so and writes nothing.
+    The name is reduced to letters, digits, dot, dash and underscore.
+
+Keypoint files are matched to videos by name: `<clip>.npz` or `<clip>_<anything>.npz`.
+When one name is a prefix of another (`swing` and `swing_2`), each file goes to the clip
+with the longest matching name.
 
 The first view of a clip decodes every frame once and saves the shrunken frames to
 `outputs/.frame_cache/` (measured on `IMG_6004`, 1551 frames of 1080x1920: 46.5 s the
@@ -66,6 +78,7 @@ newest Streamlit alongside MediaPipe makes MediaPipe fail with
 `tests/test_demo.py` covers the analysis layer and runs the real app headlessly
 (Streamlit's `AppTest`) against a synthetic clip: it renders, shows the caution banner,
 lists the right phase frames, switches metrics with the camera view, skips stale keypoint
-files, and shows guidance when no clip exists. The live-upload path (MediaPipe on an
-uploaded file) is not covered by a test. Checked by hand in a browser on `IMG_6004`: frame
+files, and shows guidance when no clip exists. Saving an upload is tested end to end (session state is
+set directly, since the test harness cannot upload a file). The upload widget and the live
+MediaPipe run inside the page are not covered by a test. Checked by hand in a browser on `IMG_6004`: frame
 jump, overlay, and all tabs.
