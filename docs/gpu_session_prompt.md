@@ -32,6 +32,11 @@ one clip, `data/raw/IMG_6004.MOV` (down-the-line, 1551 decoded frames,
   were visibly wrong. Check by eye with `scripts/compare_frames.py`.
 - Run tests (`pytest`) before committing. Commit small, push to `main`.
 
+> **Correction (added after the GPU session):** the wrist findings in this section were
+> read off images that were about 50 frames later than their labels, because
+> `iter_frames(start>0)` seeked wrongly on this file. They are withdrawn; see
+> "Correction: frame-seek bug" in docs/rtmpose.md.
+
 ## What was found on the laptop (CPU only)
 - Balanced-mode RTMPose and MediaPipe both put the wrists on the torso/hip in
   frames ~1000-1030 (post-impact motion blur); hands are really high near the club.

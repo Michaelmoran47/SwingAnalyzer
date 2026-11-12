@@ -1,4 +1,4 @@
-# RTMPose backend
+﻿# RTMPose backend
 
 Second pose backend behind the `PoseEstimator` interface, via
 [rtmlib](https://github.com/Tau-J/rtmlib) and ONNX Runtime. Top-down: YOLOX
@@ -60,7 +60,9 @@ keypoint box weighted by mean score (`select_person`).
 - **Confidence is not comparable with MediaPipe's visibility** and is not a
   reliable error flag. RTMPose scores are SimCC peak values, clipped to [0, 1].
   A `min_conf` chosen for one backend should not be assumed right for the other.
-- **It reported confident wrist positions that were wrong** (below).
+- **Whether its post-impact wrists are right is unresolved** (see "Correction: frame-seek
+  bug" and "Performance mode" below). Earlier notes saying they were wrong were based on
+  misaligned images.
 
 ## Benchmark on the first clip
 
@@ -85,13 +87,13 @@ What the benchmark shows:
 What the benchmark can mislead about:
 
 - **Completeness.** RTMPose is "100% usable" for the wrists in the swing window,
-  MediaPipe 84 to 85%. Looking at frames
-  (`scripts/compare_frames.py`, e.g. frames 1000-1030 of `IMG_6004`), both
-  backends place the wrists on the back and hip, about 1.5 torso lengths from the
-  hands that are visibly high near the club, right after impact (motion blur).
-  RTMPose reports confidence 0.57 to 0.77 there; MediaPipe's low confidence
-  at least flags the problem. So RTMPose's completeness is partly confident
-  wrong answers. Checked on six frames by eye; not quantified.
+  MediaPipe 84 to 85%. "Usable" means the model reported a position with a
+  confidence, not that it is right. **The laptop-session claim that both backends put
+  the wrists on the back and hip with the hands visibly high near the club in frames
+  1000-1030 is withdrawn**: it was read off images from about 50 frames later than
+  their labels (see "Correction: frame-seek bug"). Re-checked with correct frames, the
+  hands are partly hidden behind the torso around 1015-1035, so it is not shown that
+  the wrists are wrong there.
 
 ## A bug the second backend exposed
 
@@ -106,62 +108,62 @@ The first RTMPose-vs-MediaPipe metric comparison, run before the fix, showed
 apparent sign flips in spine change and hip movement; those were caused by this
 bug and are not real backend differences.
 
+## Correction: frame-seek bug (found on the GPU machine)
+
+`iter_frames(start > 0)` used `cap.set(CAP_PROP_POS_FRAMES, start)`. On `IMG_6004.MOV`
+the container header says 227.8 fps / 1635 frames but the stream is 239.5 fps /
+1551 frames, and the seek lands on the wrong frame: `start=985` returned decoded frame
+1035 (+50, 0.2 s) and `start=500` returned 515 (+15), measured by matching downscaled
+images against a sequential decode. Fixed in `src/swing/io/video.py` (skip by decoding);
+on the real file a seeked frame now matches the sequential one exactly (difference 0.00
+for `start=985` and `start=500`).
+
+- **Affected:** anything with a start offset: `swing overlay --start/--end`,
+  `scripts/compare_frames.py` (it drew full-run keypoints, indexed correctly, onto images
+  from about 50 frames later) and the starting point of the benchmark's speed timing.
+- **Not affected:** runs from frame 0 (so every phase, metric, jitter, completeness and
+  disagreement number in the benchmarks), and your hand labels (`swing label` reads
+  sequentially, which is why top and impact line up within 17 ms).
+- **Withdrawn, because they rested on misaligned images or on keypoints computed
+  on shifted frames:** the laptop notes that balanced mode and MediaPipe put the wrists on
+  the torso with the hands high near the club in frames ~1000-1030; the six-frame
+  "performance mode puts the wrists on the hands" check; the balanced-versus-performance
+  window comparison (wrists about 1.0 torso length apart, hips 0.14-0.17); and the first
+  GPU-session write-up of "wrists not on the hands in 985-1035".
+- **The laptop-versus-GPU disagreement is explained by this bug.** Performance mode on
+  frames 985-1050 only (`--start 985`) versus the same frames cut from the whole-clip run:
+  before the fix they were about 0.9 torso lengths apart at the wrists (same model,
+  different frames); after the fix the difference is 0.000 on all four joints in 65/65
+  frames.
+
 ## Performance mode (larger models)
 
 `--rtm-mode performance` uses YOLOX-x and RTMPose-x at 384x288 (368 MB + 184 MB
-download).
-
-### Laptop (CPU), post-impact window only
-
-Run on frames 985-1050 of `IMG_6004` only. **The whole-clip GPU run below did not
-reproduce the first bullet.**
-
-- **Wrists land on the hands.** By eye on six frames (990, 1000, 1010, 1020,
-  1030, 1045, via `scripts/compare_frames.py`), performance-mode wrists sit on
-  the golfer's hands where balanced mode and MediaPipe put them on the torso.
-  Not quantified against annotations; six frames, one swing.
-- **How far apart the two modes are** (`scripts/compare_keypoint_files.py`, torso
-  = 344 px): wrists differ by a median of about 1.0 torso length (more than 0.5
-  torso apart in 55 and 56 of 65 frames); hips differ by a median of about 0.14
-  to 0.17 torso. The hip difference was not examined, so which mode places the
-  hips better is unknown.
-- **Confidence still does not flag errors.** Performance mode reports 0.96 to
-  1.00 on the wrists; balanced mode reported 0.43 to 0.77 on its wrong ones.
-  Both are SimCC scores, so a fixed `min_conf` is not a reliable filter for
-  either.
-- **Cost on this CPU:** about 1.85 s/frame (0.54 fps; 4-frame ad-hoc timing,
-  not from the benchmark script), roughly 4x slower than balanced. The whole
-  1551-frame clip would take about 48 minutes here. GPU speed is not measured.
-
-### GPU machine (RTX 4060), whole clip
-
-Whole `IMG_6004` (1551 frames), performance mode, `--device cuda`, a person detected
-in all 1551 frames. Setup and versions are in [benchmark_gpu.md](benchmark_gpu.md).
+download). Results below are from the GPU machine (RTX 4060) on the whole of
+`IMG_6004` (1551 frames, a person detected in all), keypoints from a run from frame 0
+(unaffected by the seek bug). Setup and versions: [benchmark_gpu.md](benchmark_gpu.md).
 Still one clip, one swing, no ground-truth keypoints.
 
-- **Speed (GPU, benchmark script, 30 frames):** RTMPose performance mode 0.069 s/frame
-  (14.5 fps), against about 1.85 s/frame on the laptop CPU. MediaPipe was 0.088 s/frame
-  (11.4 fps) on this machine's i7-6700 CPU (assumed CPU-only with the legacy
-  `mp.solutions.pose` API; GPU use was not monitored), so read it as CPU time. The end-to-end `swing overlay` run, including decoding and rendering
-  the overlay, took 185 s for RTMPose performance mode.
-- **Wrists are not on the hands after impact.** By eye with `scripts/compare_frames.py`
-  on 13 frames from 985 to 1050 (985, 995, 1005, 1015, 1025, 1035, 1045, then 1000,
-  1010, 1020, 1030, 1040, 1050), plus frames 1015 and 1030 re-rendered larger: through
-  about frames 985-1035 the performance-mode wrists sit on the torso, lower back or
-  hip while the hands are high near the club, the same failure as balanced mode and
-  MediaPipe. They look close to the hands only around frames 1040-1050 (read at low
-  resolution). Not quantified against annotations.
-- **This contradicts the laptop check above** (which saw them on the hands in 990,
-  1000, 1010, 1020, 1030, 1045). The reason is **not known**. Known differences: the
-  laptop run covered only frames 985-1050, the GPU run the whole clip; the laptop
-  note records performance-mode wrist confidence of 0.96-1.00, while the GPU run
-  reported 0.49-0.96 in frames 985-1045 (1.00 only at frame 1050; for example 0.64 and 0.61 at frame 1015,
-  where the markers are visibly on the torso). Neither run was re-done to isolate
-  a cause.
-- **Confidence still does not flag the error:** 0.49-0.81 on wrists that are on the
-  torso in frames 1015-1030. MediaPipe's confidence at least drops (0.00-0.15 in
-  frames 1010-1035).
-- **Phases** (`swing phases`, only top and impact scored against your labels):
+- **Speed:** RTMPose performance mode 0.069 s/frame (14.5 fps) on the GPU (benchmark
+  script, 30 frames), against about 1.85 s/frame on the laptop CPU (4-frame ad-hoc timing;
+  whole clip about 48 minutes there). MediaPipe was 0.088 s/frame (11.4 fps) on this
+  machine's i7-6700 CPU (assumed CPU-only with the legacy `mp.solutions.pose` API; GPU use
+  was not monitored), so read it as CPU time. The end-to-end `swing overlay` run for
+  RTMPose performance mode, including decoding and rendering, took 185 s.
+- **Where the wrists are, by eye** (sequential decode, `scripts/compare_frames.py` after
+  the fix, 19 frames from 985 to 1090: 985, 995, 1005, 1015, 1025, 1035, 1045, then 1000,
+  1010, 1020, 1030, 1040, 1050, then 1055, 1060, 1065, 1070, 1080, 1090). Not quantified.
+  - 985-1010: hands low near the hips; the RTMPose wrist markers are on or next to them.
+  - 1015-1035: the arms are wrapped behind the torso and the hands are hidden. Both
+    backends put the wrist markers on the torso. This cannot be judged right or wrong
+    by eye. It is **not** shown to be a failure.
+  - 1040-1090: hands high; the RTMPose markers are on the hands in every frame viewed.
+    MediaPipe's right wrist is on the shoulder or upper back in at least frames 1050-1060.
+  - Wrist confidence in 1015-1030: RTMPose 0.49-0.81, MediaPipe 0.00-0.15.
+- **Balanced mode was not re-examined** on this machine (no balanced keypoints here), so
+  nothing here says whether performance mode is better than balanced.
+- **Phases** (`swing phases`, only top and impact scored against your labels; MediaPipe
+  and balanced columns are from [benchmark.md](benchmark.md), full-clip runs):
 
   | phase | label | MediaPipe (err ms) | RTMPose balanced (err ms) | RTMPose performance (err ms) |
   |---|---|---|---|---|
@@ -171,8 +173,7 @@ Still one clip, one swing, no ground-truth keypoints.
   | takeaway\* | 731 | 800 (+288) | 793 (+259) | 795 (+267) |
   | finish\* | 1117 | 1077 (-167) | 1102 (-63) | 1068 (-205) |
 
-  \* threshold-defined, not scored. Balanced and MediaPipe columns are from
-  [benchmark.md](benchmark.md) (laptop run).
+  \* threshold-defined, not scored.
 - **Metrics** (`swing metrics --view dtl`, same code, not validated):
 
   | metric | MediaPipe | RTMPose balanced | RTMPose performance |
@@ -187,22 +188,22 @@ Still one clip, one swing, no ground-truth keypoints.
   | hip_toward_ball_top_torso | 0.085 | 0.098 | 0.086 |
   | hip_toward_ball_impact_torso | 0.114 | 0.103 | 0.084 |
 
-  Performance mode did not move top and impact timing meaningfully (all within 17 ms
-  of your labels). Spine angle at impact (29.9, 32.9, 33.8 degrees) and hip toward
-  ball at impact (0.114, 0.103, 0.084) differ most between the three runs. Whether
-  that is the wrist problem, the impact frame each run picked (999, 996, 994), or
-  something else was not investigated.
+  Top and impact timing are within 17 ms of your labels for all three. Spine angle at
+  impact (29.9, 32.9, 33.8 degrees) and hip toward ball at impact (0.114, 0.103, 0.084)
+  differ most between the runs; why was not investigated (the impact frame each run
+  picked is 999, 996, 994).
 
-Implication (replaces the laptop one): on this clip, performance mode did **not**
-fix the post-impact wrist failure over the whole follow-through, so it cannot be
-treated as the fix. Nothing here shows which model is more accurate. The scored phases
-(top, impact) and the pre-impact metrics do not depend on post-impact wrist positions.
-For anything that does (finish, follow-through), treat wrist data after impact as
-unreliable and either exclude it or add a physical plausibility check.
+Implication: nothing in this clip shows RTMPose performance mode failing on the wrists
+(they are on the visible hands, and hidden-hand frames cannot be judged by eye), and
+nothing shows it beating balanced mode or MediaPipe on accuracy; confidence still cannot
+tell you when a wrist is wrong.
 
 ## Open questions
 
-- Why the laptop six-frame check and the GPU whole-clip run disagree (see above).
+- Whether the wrist markers in the hidden-hand frames (about 1015-1035) are where the
+  hands are. Needs a clearer view (a different camera angle) or hand-annotated keypoints.
+- Re-do the balanced-mode and MediaPipe wrist checks with correct frames; the earlier
+  ones are withdrawn above.
 - Physical plausibility checks (for example forearm length staying constant)
   could catch confident-but-wrong wrists that confidence misses.
 - More labelled swings, ideally with better light or a faster shutter, to say anything

@@ -113,8 +113,14 @@ def iter_frames(
     """Yield ``(frame_index, BGR frame)`` for ``start <= index < end``."""
     cap = _open(Path(path))
     try:
-        if start > 0:
-            cap.set(cv2.CAP_PROP_POS_FRAMES, start)
+        # Skip by decoding, never by cap.set(CAP_PROP_POS_FRAMES): seeking trusts the
+        # container header, and on IMG_6004.MOV (header 227.8 fps / 1635 frames, stream
+        # 239.5 fps / 1551 frames) it landed on the wrong frame (start=985 gave frame
+        # 1035, start=500 gave 515). Frame indices must mean "n-th decoded frame",
+        # the same as `swing label` and a run from frame 0.
+        for _ in range(start):
+            if not cap.grab():
+                return
         idx = start
         while end is None or idx < end:
             ok, frame = cap.read()
