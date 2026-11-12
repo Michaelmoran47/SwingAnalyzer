@@ -54,6 +54,14 @@ real-time swing, the page shows **"The phase timings look wrong"** and withholds
 other time-based metrics. That usually means the clip was slowed down (see
 [capture_protocol.md](capture_protocol.md#any-video-and-clips-that-lose-their-real-timeline)).
 
+For any clip stamped below 100 fps the page adds a panel, **Was this clip slowed down? What
+changes if it was**. It re-runs the analysis as if the file had been slowed by 1x, 2x, 4x, 8x and
+16x and shows, per assumption, whether the timings could be a real swing, the top, impact and
+finish frames, the durations and the tempo ratio. On the two slowed clips tried so far the frames
+barely moved between 2x and 8x while the seconds scaled directly; the finish moved most, and the
+16x row broke detection on one clip yet still passed the plausibility ranges, so read the frame
+columns, not only the yes/no. It cannot say which row is true.
+
 The sidebar **Capture frame rate** control (default: the rate stamped in the file) lets you say
 the clip was recorded at 240 or 120 fps and re-timed to play slowly. The page then says all
 timings assume that rate and that this is your claim. The chosen rate is also used for the times
