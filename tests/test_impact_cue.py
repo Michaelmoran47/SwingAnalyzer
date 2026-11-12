@@ -304,3 +304,49 @@ def test_app_ball_cue_checkbox_turns_it_off(demo_dirs):
     box.uncheck().run()
     assert not at.exception
     assert not any(v.value.startswith("Impact:") for v in list(at.caption) + list(at.success))
+
+
+# ---- clips whose timeline is slowed: the cue works on frames, not seconds ---------------
+
+def _slowed(**over):
+    """Phases of a re-timed clip: durations implausible, finish wrongly right after impact."""
+    from swing.phases import PhaseResult
+
+    f = {"address": 122, "takeaway": 129, "top": 202, "impact": 269, "finish": 270}
+    f.update(over)
+    r = PhaseResult(f, 30.0)
+    r.plausible = False
+    return r
+
+
+def test_slowed_clip_accepts_a_cue_after_the_top_even_though_the_finish_is_unreliable():
+    from swing.impact_cue import refine_impact
+
+    ph, note = refine_impact(_slowed(), BallCue(276))
+    assert ph.frames["impact"] == 276
+    assert ph.frames["finish"] is None  # 270 < 276: dropped, not shown before impact
+    assert not ph.plausible  # still flagged: the seconds are not trustworthy
+    assert "timeline looks slowed" in note and "finish (270)" in note
+
+
+def test_slowed_clip_keeps_a_finish_that_is_still_after_the_cue():
+    from swing.impact_cue import refine_impact
+
+    ph, note = refine_impact(_slowed(finish=331), BallCue(276))
+    assert ph.frames["impact"] == 276 and ph.frames["finish"] == 331 and "not shown" not in note
+
+
+def test_slowed_clip_still_rejects_a_cue_at_or_before_the_top():
+    from swing.impact_cue import refine_impact
+
+    original = _slowed()
+    ph, note = refine_impact(original, BallCue(200))
+    assert ph is original and "not after the top" in note
+
+
+def test_a_reliable_clip_still_requires_the_cue_before_the_finish():
+    from swing.impact_cue import refine_impact
+
+    original = _phases()  # plausible phases: finish 380
+    ph, note = refine_impact(original, BallCue(381))
+    assert ph is original and "between the top and the finish" in note

@@ -291,9 +291,12 @@ def ball_cue(video, seq: PoseSequence, frames: dict[str, int | None]) -> BallCue
 def refine_impact(phases, cue: BallCue):
     """Return ``(phases, note)`` with impact taken from the ball cue when that is sound.
 
-    The cue replaces the hand-based impact only if it falls after the top (and before the
-    finish, when there is one) and the corrected phases still look like a real swing. Otherwise
-    the hand-based phases come back unchanged, with a note saying why.
+    The cue replaces the hand-based impact only if it falls after the top and the corrected
+    phases still make sense. When the timings look like a real-time swing, "make sense" includes
+    the finish coming after impact and plausible durations. When they do not (a clip whose
+    timeline is slowed or re-timed), the finish and the durations are unreliable, so only the
+    order address < takeaway < top < impact is required: the cue works on frames, not seconds.
+    Otherwise the hand-based phases come back unchanged, with a note saying why.
     """
     from dataclasses import replace
 
@@ -303,10 +306,23 @@ def refine_impact(phases, cue: BallCue):
         return phases, f"impact from the hands: {cue.note}" if cue.note else "impact from the hands"
     f = dict(phases.frames)
     top, fin = f.get("top"), f.get("finish")
-    if top is None or not cue.frame > top or (fin is not None and not cue.frame < fin):
-        return phases, f"ball cue (frame {cue.frame}) is not between the top and the finish: impact from the hands"
+    reliable_timeline = phases.plausible
+    if top is None or not cue.frame > top or (reliable_timeline and fin is not None and not cue.frame < fin):
+        where = "between the top and the finish" if reliable_timeline else "after the top"
+        return phases, f"ball cue (frame {cue.frame}) is not {where}: impact from the hands"
     f["impact"] = cue.frame
-    issues = plausibility_issues(f, phases.fps)
+    dropped_finish = False
+    if not reliable_timeline and fin is not None and fin <= cue.frame:
+        f["finish"] = None  # a threshold guess on a slowed timeline that now falls before impact: not shown
+        dropped_finish = True
+    if reliable_timeline:
+        issues = plausibility_issues(f, phases.fps)
+    else:
+        issues = plausibility_issues({k: v for k, v in f.items() if k != "finish"}, phases.fps)
+        issues = [i for i in issues if i.startswith("phases are out of order")]  # durations are not trustworthy here
     if issues:
         return phases, "ball cue gives timings that cannot be a real swing (" + "; ".join(issues) + "): impact from the hands"
-    return replace(phases, frames=f), f"impact from the ball leaving the tee (hand-based was {phases.frames.get('impact')})"
+    where = "" if reliable_timeline else "; the clip's timeline looks slowed, so only the frame is reliable, not the seconds"
+    if dropped_finish:
+        where += f"; the finish ({fin}) fell before the corrected impact and is not shown"
+    return replace(phases, frames=f), f"impact from the ball leaving the tee (hand-based was {phases.frames.get('impact')}){where}"

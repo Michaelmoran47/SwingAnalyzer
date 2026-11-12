@@ -178,8 +178,8 @@ fps_choice = st.sidebar.selectbox(
 capture_fps = None if fps_choice == "stamped" else float(fps_choice)
 a = analyze(seq, view, window_s, min_conf, data["labels"], capture_fps)
 fps_used = a.smooth.fps
-if use_ball and a.phases.plausible and all(
-        a.phases.frames.get(p) is not None for p in ("address", "takeaway", "top", "impact")):
+_four = [a.phases.frames.get(p) for p in ("address", "takeaway", "top", "impact")]
+if use_ball and None not in _four and all(x < y for x, y in zip(_four, _four[1:])):
     with st.spinner("Looking for the ball in the video (first time only; the answer is remembered)..."):
         a = apply_ball_cue(a, ball_cue_cached(data["video"], a, CUE_CACHE))
 MIN_FPS = PhaseParams().min_fps

@@ -27,16 +27,20 @@ option (on by default).
    and never does again. That is the club arriving at the ball, a frame or so before the ball is
    clearly gone, which matches the labelling guide's "later frame" rule closely in the cases
    checked.
-6. **Safety net.** The answer is used only if it is after the top, before the finish, within 60 %
-   of the downswing length of the hand-based frame, and the corrected phases still look like a
-   real swing. Otherwise the hand-based impact stays and the page says why.
+6. **Safety net.** The answer is used only if it is after the top, within 60 % of the downswing
+   length (in frames) of the hand-based frame, and the corrected phases make sense. When the
+   timings look like a real-time swing that includes the finish coming after impact and plausible
+   durations. On a clip whose timeline looks slowed the finish and the durations are unreliable,
+   so only the frame order address < takeaway < top < impact is required (the cue works on
+   frames, not seconds) and a finish that falls before the corrected impact is dropped rather
+   than shown. Otherwise the hand-based impact stays and the page says why.
 
 ## What it did on the three clips (one swing each)
 
 | Clip | Your label | Hand-based | Ball cue |
 |---|---|---|---|
 | `IMG_6004` (240 fps) | 995 | 999 (+4) | 995 (0) |
-| Recording (slow-motion screen capture, 240 fps assumed) | 276 | 270 (-6) | 276 (0) |
+| Recording (slow-motion screen capture; same at its stamped 30 fps and at an assumed 240) | 276 | 270 (-6) | 276 (0) |
 | `IMG_6003` (re-timed, 240 fps assumed) | none | 1472 | 1467 |
 
 For `IMG_6003` there is no label. Looking at the frames: at 1462-1466 the club approaches and
