@@ -82,6 +82,29 @@ JSON per clip, added in milestone 3).
   normal speed or the ramp has been flattened; real-time metrics such as tempo
   would be wrong, so re-export it.
 
+## Clips that lose their real timeline
+
+Everything time-based (phases, tempo, smoothing windows) assumes the file's frame
+timestamps are real time. A slo-mo clip can be saved or exported **re-timed to play slowly**,
+for example 240 fps footage stamped as 30 fps. Then the swing takes seconds instead of
+about one second, and `swing info` reports about 30 fps even though the pixels came from a
+240 fps capture.
+
+How to tell: `swing info <clip>` reports a frame rate below 100, or the whole clip is far
+longer than the swing (a backswing that takes several seconds is the giveaway).
+
+What the project does about it:
+
+- Phase detection **refuses to run below 100 fps** and says so, rather than returning
+  numbers (what happened on the first re-timed upload: top and impact on the same frame).
+- If you know the capture rate, give it: `swing phases clip.npz --fps 240`,
+  `swing metrics clip.npz --view dtl --fps 240`, or the demo's **Capture frame rate**
+  control. The keypoints are per frame, so only the time base changes. This is your claim
+  about the clip and cannot be checked from the file: if it is wrong, every time and tempo
+  is wrong.
+- Better: keep the original file. AirDrop or copy the original `.MOV` from Photos rather
+  than an exported or shared copy, and re-run `swing info` on it.
+
 ## Known limitations
 
 - A single camera gives a 2D projection. DTL and FO angles are image-plane

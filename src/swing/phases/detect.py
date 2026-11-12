@@ -43,6 +43,9 @@ class PhaseParams:
     impact_window_s: float = 0.20
     finish_frac: float = 0.10
     finish_hold_s: float = 0.15
+    # The rules use windows of tens of milliseconds and a 60 ms smoother; below this frame
+    # rate they cover only a frame or two and the results are not meaningful.
+    min_fps: float = 100.0
 
 
 @dataclass
@@ -102,6 +105,13 @@ def detect_phases_from_hands(
                                     ("address", "takeaway", "top", "impact", "finish")}
     warn: list[str] = []
     res = PhaseResult(frames, fps, warn)
+
+    if fps < p.min_fps:
+        warn.append(
+            f"frame rate {fps:.1f} fps is below {p.min_fps:.0f}, so phases were not detected. "
+            "If the clip was recorded in slo-mo and re-timed to play slowly, give the capture "
+            "frame rate (CLI --fps; in the demo, the 'Capture frame rate' control)")
+        return res
 
     finite = np.isfinite(hands).all(axis=1)
     if finite.sum() < 10:

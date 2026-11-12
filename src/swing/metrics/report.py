@@ -74,20 +74,24 @@ def compute_metrics(seq: PoseSequence, phases: PhaseResult, view: str) -> Metric
     k, fps = seq.keypoints, seq.fps
     fr = {p: (None if f is None else f - seq.start_frame) for p, f in phases.frames.items()}
 
+    note = f" ({phases.warnings[0]})" if phases.warnings else ""
     for name, v in tempo(fr, fps).items():
-        rep.put(name, v)
+        if v is None:
+            rep.skip([name], "needs takeaway, top and impact, in that order" + note)
+        else:
+            rep.put(name, v)
 
     spine_names = ["spine_angle_address_deg", "spine_angle_top_deg",
                    "spine_angle_impact_deg", "spine_angle_change_to_impact_deg"]
     needed = [fr.get("address"), fr.get("top"), fr.get("impact")]
     if None in needed:
-        rep.skip(spine_names, "needs address, top and impact")
+        rep.skip(spine_names, "needs address, top and impact" + note)
         view_names = {"dtl": ["hip_toward_ball_top_torso", "hip_toward_ball_impact_torso"],
                       "fo": ["hip_slide_top_torso", "hip_slide_impact_torso",
                              "head_sway_top_torso", "head_sway_impact_torso",
                              "head_sway_max_excursion_torso",
                              "shoulder_turn_proxy_top_deg", "hip_turn_proxy_top_deg"]}[view]
-        rep.skip(view_names, "needs address, top and impact")
+        rep.skip(view_names, "needs address, top and impact" + note)
         return rep
     a, top, imp = needed
 

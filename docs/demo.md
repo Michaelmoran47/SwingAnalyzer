@@ -46,6 +46,15 @@ seconds (reading the video's frame timestamps still takes a moment). The cache i
 on the file's path, size and modification time, so replacing the video rebuilds it; a
 damaged cache file is rebuilt automatically. It is safe to delete the folder at any time.
 
+## Capture frame rate
+
+The sidebar has a **Capture frame rate** control, by default the rate stamped in the file.
+Below 100 fps the page shows an error and computes no phases or metrics (see
+[capture_protocol.md](capture_protocol.md#clips-that-lose-their-real-timeline)). If you
+know the clip was recorded in slo-mo and re-timed to play slowly, choose 240 or 120; the
+page then says that all timings assume that rate and that this is your claim. The chosen
+rate is also used for the times shown on the Frames tab and the plot.
+
 ## What the page says about trust
 
 The banner and tables repeat what the docs say: one swing, 2D geometry, only top and

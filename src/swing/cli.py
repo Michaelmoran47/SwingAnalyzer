@@ -62,6 +62,10 @@ def _cmd_phases(args: argparse.Namespace) -> int:
     from swing.smoothing import smooth_sequence
 
     seq = PoseSequence.load(args.keypoints)
+    if args.fps:
+        from dataclasses import replace
+
+        seq = replace(seq, fps=args.fps)
     if not args.no_smooth:
         seq = smooth_sequence(seq)
     res = detect_phases(seq)
@@ -91,6 +95,10 @@ def _cmd_metrics(args: argparse.Namespace) -> int:
     from swing.smoothing import smooth_sequence
 
     seq = PoseSequence.load(args.keypoints)
+    if args.fps:
+        from dataclasses import replace
+
+        seq = replace(seq, fps=args.fps)
     if not args.no_smooth:
         seq = smooth_sequence(seq)
     phases = detect_phases(seq)
@@ -199,6 +207,8 @@ def main(argv: list[str] | None = None) -> int:
     pp.add_argument("keypoints", help=".npz from `swing overlay --keypoints` (unsmoothed)")
     pp.add_argument("--labels", help="hand-label JSON to score against")
     pp.add_argument("--no-smooth", action="store_true", help="input is already smoothed")
+    pp.add_argument("--fps", type=float, help="capture frame rate to use instead of the file's, "
+                    "for slo-mo clips re-timed to play slowly (e.g. 240). Your claim; not verified")
     pp.set_defaults(func=_cmd_phases)
 
     pm = sub.add_parser("metrics", help="compute swing metrics from a RAW keypoints .npz")
@@ -206,6 +216,8 @@ def main(argv: list[str] | None = None) -> int:
     pm.add_argument("--view", required=True, choices=["dtl", "fo"],
                     help="camera view of this clip: down-the-line or face-on")
     pm.add_argument("--no-smooth", action="store_true", help="input is already smoothed")
+    pm.add_argument("--fps", type=float, help="capture frame rate to use instead of the file's, "
+                    "for slo-mo clips re-timed to play slowly (e.g. 240). Your claim; not verified")
     pm.add_argument("--json", help="also write results to this file")
     pm.set_defaults(func=_cmd_metrics)
 

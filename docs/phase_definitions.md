@@ -44,6 +44,15 @@ Consequences to keep in mind:
 - The rule parameters were set from first principles, not tuned to any clip.
   Changing them changes these phases and any metric built on them.
 
+## Minimum frame rate
+
+The rules use windows of tens of milliseconds (0.2 s after the peak for impact, a 0.15 s hold
+for finish, a 60 ms smoother) and were built on 240 fps footage. Below 100 fps
+(`PhaseParams.min_fps`) detection returns no phases and a warning instead of guessing. On a
+30 fps re-timed clip, an earlier version ran anyway and put top and impact on the same frame.
+Telling the detector the real capture rate fixes the time base (`--fps`); it does not make
+the rules valid for a clip that was genuinely captured at 30 fps, which is not supported.
+
 ## Visual re-check with corrected frames
 
 An earlier by-eye diagnosis of address and takeaway used images from `iter_frames(start=660)`,

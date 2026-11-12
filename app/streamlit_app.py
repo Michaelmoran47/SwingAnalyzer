@@ -19,6 +19,7 @@ from swing.demo import (analyze, find_clips, hand_figure, metric_table, overlay_
                         safe_clip_name, save_upload, usable_keypoint_files)
 from swing.io import cached_jpeg_frames, load_jpeg_frames, probe_video, store_jpeg_frames
 from swing.labels import PHASES, PhaseLabels
+from swing.phases import PhaseParams
 from swing.pose import J, PoseSequence
 
 RAW = os.environ.get("SWING_RAW_DIR", "data/raw")
@@ -156,7 +157,30 @@ if data is None:
 info, seq = data["info"], data["seq"]
 for w in info.warnings:
     st.caption(f"video: {w}")
-a = analyze(seq, view, window_s, min_conf, data["labels"])
+
+stamped = float(seq.fps)
+FPS_CHOICES = {
+    "stamped": f"As stamped in the file ({stamped:.1f} fps)",
+    "240": "240 fps slo-mo, clip re-timed to play slowly",
+    "120": "120 fps slo-mo, clip re-timed to play slowly",
+}
+fps_choice = st.sidebar.selectbox(
+    "Capture frame rate", list(FPS_CHOICES), format_func=FPS_CHOICES.get, key=f"fps_{data['source']}",
+    help="Phase detection and metrics need the real capture rate. Leave this on the file's rate "
+         "unless the file was re-timed (a swing that takes seconds instead of about a second).")
+capture_fps = None if fps_choice == "stamped" else float(fps_choice)
+a = analyze(seq, view, window_s, min_conf, data["labels"], capture_fps)
+fps_used = a.smooth.fps
+MIN_FPS = PhaseParams().min_fps
+if capture_fps is None and stamped < MIN_FPS:
+    st.error(
+        f"This clip's timeline is {stamped:.1f} fps, below the {MIN_FPS:.0f} fps the phase rules need, "
+        "so phases and metrics are **not computed**. If you recorded in slo-mo and the file was re-timed "
+        "to play slowly (the swing takes seconds, not about a second), choose the capture frame rate "
+        "in the sidebar. That is your claim about the clip; if it is wrong, every time here is wrong.")
+elif capture_fps is not None:
+    st.info(f"Timings assume this clip was captured at {capture_fps:.0f} fps; the file says "
+            f"{stamped:.1f}. If that is not true for this clip, every time, tempo and phase here is wrong.")
 scale = min(1.0, IMG_HEIGHT / info.height)
 jpegs = cached_frames(str(data["video"]), _mtime(data["video"]), scale, mode == "Saved analysis")
 
@@ -164,7 +188,8 @@ if mode == "Upload a video":
     save_panel(data, jpegs, scale)
 
 st.caption(f"{data['source']} | backend: **{data['backend']}** | {info.width}x{info.height}, "
-           f"{info.fps:.1f} fps, {info.frame_count} frames | view: **{view}**")
+           f"{fps_used:.1f} fps{' (set by you)' if a.stamped_fps else ''}, {info.frame_count} frames | "
+           f"view: **{view}**")
 
 tab_frames, tab_phases, tab_metrics, tab_traj, tab_about = st.tabs(
     ["Frames", "Phases", "Metrics", "Hand trajectory", "About"])
@@ -199,7 +224,7 @@ with tab_frames:
             st.image(jpegs[idx], use_container_width=True)
     with c2:
         near = [p for p in PHASES if a.phases.frames.get(p) is not None and abs(a.phases.frames[p] - idx) <= 2]
-        st.markdown(f"**Frame {idx}**, t = {idx / info.fps:.3f} s" + (f" — detected **{near[0]}**" if near else ""))
+        st.markdown(f"**Frame {idx}**, t = {idx / fps_used:.3f} s" + (f" — detected **{near[0]}**" if near else ""))
         hl = a.labels.phase_at(idx) if a.labels else None
         if hl:
             st.markdown(f"Your hand label here: **{hl}**")
@@ -232,7 +257,7 @@ with tab_metrics:
 
 with tab_traj:
     # Streamlit runs every tab's code on each rerun; drawing takes ~0.5 s, so draw only on change.
-    fig_key = (data["source"], id(seq), view, window_s, min_conf, data["labels"] is not None)
+    fig_key = (data["source"], id(seq), view, window_s, min_conf, data["labels"] is not None, fps_used)
     if st.session_state.get("_fig_key") != fig_key:
         st.session_state["_fig"], st.session_state["_fig_key"] = hand_figure(a), fig_key
     st.pyplot(st.session_state["_fig"])

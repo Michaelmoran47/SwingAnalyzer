@@ -6,7 +6,7 @@ how much it can be trusted (see docs/phase_definitions.md and docs/metrics.md).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import cv2
@@ -52,13 +52,24 @@ class Analysis:
     metrics: MetricReport
     view: str
     labels: PhaseLabels | None = None
+    stamped_fps: float | None = None  # the file's own frame rate, when ``capture_fps`` replaced it
 
 
 def analyze(seq: PoseSequence, view: str, window_s: float = 0.06, min_conf: float = 0.3,
-            labels: PhaseLabels | None = None) -> Analysis:
+            labels: PhaseLabels | None = None, capture_fps: float | None = None) -> Analysis:
+    """Smooth, detect phases and compute metrics.
+
+    ``capture_fps`` replaces the frame rate stored with the keypoints. Use it when a clip's
+    timeline was re-timed (for example 240 fps slo-mo exported to play at 30 fps): the
+    keypoints are per frame, so only the time base changes. It is the caller's claim about
+    the clip; nothing here can verify it.
+    """
+    stamped = None
+    if capture_fps is not None and abs(capture_fps - seq.fps) > 1e-6:
+        stamped, seq = seq.fps, replace(seq, fps=float(capture_fps))
     smooth = smooth_sequence(seq, min_conf, window_s=window_s)
     phases = detect_phases(smooth)
-    return Analysis(seq, smooth, phases, compute_metrics(smooth, phases, view), view, labels)
+    return Analysis(seq, smooth, phases, compute_metrics(smooth, phases, view), view, labels, stamped)
 
 
 def phase_table(a: Analysis) -> list[dict]:
