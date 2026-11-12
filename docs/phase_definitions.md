@@ -11,10 +11,12 @@ reference and the detector is scored against it.
 
 | Phase | Rule |
 |---|---|
-| **impact** | Lowest hand position (max image y) within 0.20 s after peak hand speed. |
+| **impact** | When the clip shows the ball on the tee: the first frame the ball leaves it, from the picture ([impact_cue.md](impact_cue.md)). Otherwise, or if that cue is not sound: lowest hand position (max image y) within 0.20 s after peak hand speed. |
 | **top** | Highest hand position (min image y) before the peak hand speed. |
 
-Only these two count toward any accuracy claim in this project.
+Only these two count toward any accuracy claim in this project. The hand-only impact can be several
+frames off (-6 frames on one slow-motion clip, where the hands stall while the club swings through);
+the ball cue exists because of that.
 
 ## Threshold-defined: address, takeaway, finish
 

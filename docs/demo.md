@@ -67,6 +67,14 @@ the clip was recorded at 240 or 120 fps and re-timed to play slowly. The page th
 timings assume that rate and that this is your claim. The chosen rate is also used for the times
 on the Frames tab and the plot. Below 15 fps nothing is computed.
 
+## Impact from the ball
+
+The sidebar option **Find impact from the ball** (on by default) looks in the video for the
+ball on the tee and takes impact as the first frame it leaves; see [impact_cue.md](impact_cue.md).
+The Phases tab says which source was used. If no ball is found, impact stays hand-based and the
+reason is shown. The first time costs tens of seconds (it decodes the clip up to impact); the
+answer is remembered in `outputs/.cue_cache/`. Switch it off to skip reading the video.
+
 ## What the page says about trust
 
 The banner and tables repeat what the docs say: one swing, 2D geometry, only top and

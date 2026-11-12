@@ -53,6 +53,9 @@ class Analysis:
     view: str
     labels: PhaseLabels | None = None
     stamped_fps: float | None = None  # the file's own frame rate, when ``capture_fps`` replaced it
+    impact_note: str = "impact from the hands"  # where the impact frame came from (see apply_ball_cue)
+    impact_from_ball: bool = False
+    ball_cue: object | None = None  # swing.impact_cue.BallCue when a cue was attempted
 
 
 def analyze(seq: PoseSequence, view: str, window_s: float = 0.06, min_conf: float = 0.3,
@@ -70,6 +73,61 @@ def analyze(seq: PoseSequence, view: str, window_s: float = 0.06, min_conf: floa
     smooth = smooth_sequence(seq, min_conf, window_s=window_s)
     phases = detect_phases(smooth)
     return Analysis(seq, smooth, phases, compute_metrics(smooth, phases, view), view, labels, stamped)
+
+
+def apply_ball_cue(a: Analysis, cue) -> Analysis:
+    """Use the ball-leaves-the-tee frame as the impact when it is sound; recompute the metrics.
+
+    ``cue`` is a ``swing.impact_cue.BallCue`` (None means no attempt was made). The hand-based
+    analysis comes back unchanged, with a note, when the cue is missing or not sound.
+    """
+    from swing.impact_cue import refine_impact
+
+    if cue is None:
+        return a
+    phases, note = refine_impact(a.phases, cue)
+    from_ball = phases is not a.phases
+    metrics = compute_metrics(a.smooth, phases, a.view) if from_ball else a.metrics
+    return replace(a, phases=phases, metrics=metrics, impact_note=note, impact_from_ball=from_ball, ball_cue=cue)
+
+
+def ball_cue_cached(video: str | Path, a: Analysis, cache_dir: str | Path):
+    """Run the ball cue for ``a``'s phases on ``video``, remembering the answer on disk.
+
+    Decoding the clip up to impact takes tens of seconds, so the result (a few numbers) is saved
+    in ``cache_dir`` keyed on the video file, the phase frames and the keypoints. Safe to delete.
+    """
+    import hashlib
+    import json
+
+    from swing.impact_cue import BallCue, ball_cue
+
+    video, cache_dir = Path(video), Path(cache_dir)
+    f = a.phases.frames
+    st = video.stat()
+    kp = a.smooth.keypoints
+    raw = "|".join(str(x) for x in (video.resolve(), st.st_size, st.st_mtime_ns, f.get("address"), f.get("takeaway"),
+                                    f.get("top"), f.get("impact"), kp.shape, round(float(np.nansum(kp[:, :, :2])), 1)))
+    entry = cache_dir / f"{video.stem}_{hashlib.sha1(raw.encode()).hexdigest()[:16]}.cue.json"
+    if entry.is_file():
+        try:
+            d = json.loads(entry.read_text())
+            return BallCue(d["frame"], tuple(d["center"]) if d["center"] else None, d["radius"], d["score"],
+                           d["candidates"], d["note"])
+        except Exception:
+            pass  # unreadable: recompute
+    cue = ball_cue(video, a.smooth, f)
+    try:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        entry.write_text(json.dumps({"frame": cue.frame, "center": list(cue.center) if cue.center else None,
+                                     "radius": cue.radius, "score": cue.score,
+                                     "candidates": cue.candidates, "note": cue.note}))
+        for old in cache_dir.glob(f"{video.stem}_*.cue.json"):
+            if old != entry:
+                old.unlink(missing_ok=True)
+    except OSError:
+        pass  # caching is best effort
+    return cue
 
 
 def slowdown_scan(seq: PoseSequence, view: str, window_s: float = 0.06, min_conf: float = 0.3,
@@ -112,6 +170,8 @@ def phase_table(a: Analysis) -> list[dict]:
             "time (s)": None if f is None else round(f / a.smooth.fps, 3),
             "status": "scored against your hand labels (one swing)" if p in VALIDATED_PHASES
                       else "threshold-defined (not scored)",
+            "from": ("the ball leaving the tee (picture)" if a.impact_from_ball else "the hands")
+                    if p == "impact" else "the hands",
             "your label": None if e is None else e.labelled,
             "error (ms)": None if e is None or e.error_ms is None else round(e.error_ms, 1),
         })

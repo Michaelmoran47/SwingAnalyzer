@@ -15,8 +15,9 @@ from pathlib import Path
 
 import streamlit as st
 
-from swing.demo import (analyze, find_clips, hand_figure, metric_table, overlay_rgb, phase_table,
-                        safe_clip_name, save_upload, slowdown_scan, usable_keypoint_files)
+from swing.demo import (analyze, apply_ball_cue, ball_cue_cached, find_clips, hand_figure, metric_table,
+                        overlay_rgb, phase_table, safe_clip_name, save_upload, slowdown_scan,
+                        usable_keypoint_files)
 from swing.io import cached_jpeg_frames, load_jpeg_frames, probe_video, store_jpeg_frames
 from swing.labels import PHASES, PhaseLabels
 from swing.phases import PhaseParams
@@ -28,6 +29,7 @@ LABELS = os.environ.get("SWING_LABELS_DIR", "data/labels")
 IMG_HEIGHT = 720
 # Decoded frames are saved here (safe to delete); the first view of a clip fills it.
 CACHE = os.environ.get("SWING_CACHE_DIR", str(Path(OUT) / ".frame_cache"))
+CUE_CACHE = os.environ.get("SWING_CUE_CACHE_DIR", str(Path(OUT) / ".cue_cache"))
 
 st.set_page_config(page_title="Swing Analyzer", layout="wide")
 
@@ -149,6 +151,12 @@ window_s = st.sidebar.slider("Smoothing window (s)", 0.02, 0.15, 0.06, 0.01,
                              help="Savitzky-Golay, zero-phase. Default 0.06.")
 min_conf = st.sidebar.slider("Minimum keypoint confidence", 0.0, 0.9, 0.3, 0.05,
                              help="Below this a joint counts as missing.")
+use_ball = st.sidebar.checkbox(
+    "Find impact from the ball", True,
+    help="Looks in the video for the ball on the tee and takes impact as the first frame it departs. "
+         "Wrist tracking alone can be several frames off. Needs a visible ball and a fairly steady camera; "
+         "if no ball is found, impact stays hand-based and the page says why. Reads the video the first "
+         "time (tens of seconds); the answer is remembered.")
 
 data = pick_saved() if mode == "Saved analysis" else pick_upload()
 if data is None:
@@ -170,6 +178,10 @@ fps_choice = st.sidebar.selectbox(
 capture_fps = None if fps_choice == "stamped" else float(fps_choice)
 a = analyze(seq, view, window_s, min_conf, data["labels"], capture_fps)
 fps_used = a.smooth.fps
+if use_ball and a.phases.plausible and all(
+        a.phases.frames.get(p) is not None for p in ("address", "takeaway", "top", "impact")):
+    with st.spinner("Looking for the ball in the video (first time only; the answer is remembered)..."):
+        a = apply_ball_cue(a, ball_cue_cached(data["video"], a, CUE_CACHE))
 MIN_FPS = PhaseParams().min_fps
 if fps_used < MIN_FPS:
     st.error(f"This clip's timeline is {fps_used:.1f} fps, below the {MIN_FPS:.0f} fps the phase rules "
@@ -246,8 +258,11 @@ with tab_frames:
 
 with tab_phases:
     st.dataframe(phase_table(a), hide_index=True, use_container_width=True)
+    if use_ball:
+        (st.success if a.impact_from_ball else st.caption)(f"Impact: {a.impact_note}.")
     st.markdown(
-        "**top** = highest hands before peak hand speed; **impact** = lowest hands shortly after it. "
+        "**top** = highest hands before peak hand speed; **impact** = the first frame the ball leaves the tee "
+        "when a ball is found in the picture, otherwise the lowest hands shortly after the peak speed. "
         "**address**, **takeaway** and **finish** are set by speed/displacement thresholds on the wrist "
         "trajectory (see `docs/phase_definitions.md`), so they can differ from what a person would pick "
         "by 0.1 to 0.4 s on the one labelled swing. Phases the rules cannot find are blank, not guessed."
@@ -268,7 +283,8 @@ with tab_metrics:
 
 with tab_traj:
     # Streamlit runs every tab's code on each rerun; drawing takes ~0.5 s, so draw only on change.
-    fig_key = (data["source"], id(seq), view, window_s, min_conf, data["labels"] is not None, fps_used)
+    fig_key = (data["source"], id(seq), view, window_s, min_conf, data["labels"] is not None, fps_used,
+               a.phases.frames.get("impact"))
     if st.session_state.get("_fig_key") != fig_key:
         st.session_state["_fig"], st.session_state["_fig_key"] = hand_figure(a), fig_key
     st.pyplot(st.session_state["_fig"])
