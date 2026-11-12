@@ -43,3 +43,24 @@ Consequences to keep in mind:
   gives about 1.5 : 1. Report the rule alongside any tempo number.
 - The rule parameters were set from first principles, not tuned to any clip.
   Changing them changes these phases and any metric built on them.
+
+## Visual re-check with corrected frames
+
+An earlier by-eye diagnosis of address and takeaway used images from `iter_frames(start=660)`,
+which seeked to the wrong frame (see "Correction: frame-seek bug" in [rtmpose.md](rtmpose.md)),
+so its statement that the detector's address (frame 786) was "wrong by any definition" is
+withdrawn. Re-checked with the fixed `iter_frames` (frames 681, 720, 731, 786, 800, 1077,
+1117, 1181 of `IMG_6004`, by eye, not quantified):
+
+- 681 and 720 look like address; at 731 the club has moved very slightly; by 786 the club
+  head has visibly left its position behind the ball. So the hand labels (address 681,
+  takeaway 731) are reasonable, and the detector's address (786) and takeaway (800) are
+  later because the hands move little while the club starts moving.
+- Finish: from 1077 on the hands stay in roughly the same place while the club keeps
+  swinging round (1077, 1117, 1181), which matches the hands-versus-club difference
+  between the detector's finish (1077) and the hand label (1117).
+
+The decision to treat address, takeaway and finish as threshold-defined rests on the
+keypoint numbers above (hand displacement of 4.7 px at the takeaway label, close to pose
+noise) and on this hands-versus-club difference, not on the earlier misaligned images.
+
