@@ -9,6 +9,8 @@ doubt -- see docs/capture_protocol.md.
 
 from __future__ import annotations
 
+import hashlib
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterator
@@ -141,4 +143,52 @@ def load_jpeg_frames(
         small = cv2.resize(frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
         out.append(cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, quality])[1].tobytes())
     return out
+
+
+_CACHE_VERSION = 1
+
+
+def _cache_key(path: Path, scale: float, quality: int) -> str:
+    st = path.stat()
+    raw = f"v{_CACHE_VERSION}|{path.resolve()}|{st.st_size}|{st.st_mtime_ns}|{scale:.6f}|{quality}"
+    return hashlib.sha1(raw.encode()).hexdigest()[:16]
+
+
+def cached_jpeg_frames(
+    path: str | Path, scale: float, cache_dir: str | Path, quality: int = 90
+) -> tuple[list[bytes], bool]:
+    """Like :func:`load_jpeg_frames` for a whole clip, but saved to ``cache_dir``.
+
+    Returns ``(frames, from_cache)``. The cache entry is keyed on the file's path,
+    size and modification time plus scale and quality, so editing or replacing the
+    video invalidates it. Entries for the same video with a different key are
+    removed. A missing, truncated or unreadable cache file is silently rebuilt.
+    The cache is safe to delete at any time.
+    """
+    import numpy as np
+
+    path, cache_dir = Path(path), Path(cache_dir)
+    key = _cache_key(path, scale, quality)
+    entry = cache_dir / f"{path.stem}_{key}.frames.npz"
+    if entry.is_file():
+        try:
+            with np.load(entry, allow_pickle=False) as d:
+                data, offsets = d["data"].tobytes(), d["offsets"]
+            return [data[a:b] for a, b in zip(offsets[:-1], offsets[1:])], True
+        except Exception:
+            pass  # corrupt or truncated: rebuild below
+    frames = load_jpeg_frames(path, scale, quality=quality)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    offsets = np.cumsum([0] + [len(f) for f in frames]).astype(np.int64)
+    tmp = entry.with_name(entry.name + f".{os.getpid()}.tmp")
+    try:
+        with open(tmp, "wb") as fh:  # file handle: np.savez would append ".npz" to a name
+            np.savez(fh, data=np.frombuffer(b"".join(frames), np.uint8), offsets=offsets)
+        os.replace(tmp, entry)  # atomic: readers never see a half-written file
+    finally:
+        tmp.unlink(missing_ok=True)
+    for old in cache_dir.glob(f"{path.stem}_*.frames.npz"):
+        if old != entry:
+            old.unlink(missing_ok=True)
+    return frames, False
 

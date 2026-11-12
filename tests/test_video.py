@@ -43,3 +43,49 @@ def test_iter_all(synthetic_video):
 def test_missing_file(tmp_path):
     with pytest.raises(FileNotFoundError):
         probe_video(tmp_path / "nope.mp4")
+
+
+# ---- on-disk frame cache -----------------------------------------------------
+
+def test_frame_cache_roundtrip_and_reuse(synthetic_video, tmp_path, monkeypatch):
+    from swing.io import cached_jpeg_frames, load_jpeg_frames
+    import swing.io.video as video
+
+    cache = tmp_path / "cache"
+    first, hit1 = cached_jpeg_frames(synthetic_video, 0.5, cache)
+    assert not hit1 and len(first) == 60
+    assert first == load_jpeg_frames(synthetic_video, 0.5)  # identical bytes
+    # second call must not decode at all
+    monkeypatch.setattr(video, "iter_frames", lambda *a, **k: (_ for _ in ()).throw(AssertionError("decoded")))
+    second, hit2 = cached_jpeg_frames(synthetic_video, 0.5, cache)
+    assert hit2 and second == first
+
+
+def test_frame_cache_invalidates_on_scale_and_file_change(synthetic_video, tmp_path):
+    import os
+
+    from swing.io import cached_jpeg_frames
+
+    cache = tmp_path / "cache"
+    cached_jpeg_frames(synthetic_video, 0.5, cache)
+    _, hit = cached_jpeg_frames(synthetic_video, 0.25, cache)  # different scale: new entry
+    assert not hit
+    assert len(list(cache.glob("*.frames.npz"))) == 1  # the stale one was removed
+    st = synthetic_video.stat()
+    os.utime(synthetic_video, ns=(st.st_atime_ns, st.st_mtime_ns + 5_000_000_000))  # file "edited"
+    _, hit = cached_jpeg_frames(synthetic_video, 0.25, cache)
+    assert not hit
+
+
+def test_frame_cache_rebuilds_from_corrupt_file(synthetic_video, tmp_path):
+    from swing.io import cached_jpeg_frames
+
+    cache = tmp_path / "cache"
+    good, _ = cached_jpeg_frames(synthetic_video, 0.5, cache)
+    [entry] = cache.glob("*.frames.npz")
+    entry.write_bytes(entry.read_bytes()[:200])  # truncated
+    again, hit = cached_jpeg_frames(synthetic_video, 0.5, cache)
+    assert not hit and again == good
+    _, hit = cached_jpeg_frames(synthetic_video, 0.5, cache)
+    assert hit  # and it was repaired
+    assert not list(cache.glob("*.tmp"))

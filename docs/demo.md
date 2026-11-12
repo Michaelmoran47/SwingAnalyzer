@@ -27,8 +27,12 @@ Show more options, then Send to, then Desktop (create shortcut).
   is kept only in a temporary folder for the session. RTMPose is not offered here: use
   the CLI, then pick the saved analysis.
 
-The first view of a clip decodes every frame once (about 1.5 minutes for a 1551-frame
-1080x1920 clip on a laptop); later views are instant.
+The first view of a clip decodes every frame once and saves the shrunken frames to
+`outputs/.frame_cache/` (measured on `IMG_6004`, 1551 frames of 1080x1920: 46.5 s the
+first time, 0.2 s from the cache, 70 MB on disk). After that, launches open in a few
+seconds (reading the video's frame timestamps still takes a moment). The cache is keyed
+on the file's path, size and modification time, so replacing the video rebuilds it; a
+damaged cache file is rebuilt automatically. It is safe to delete the folder at any time.
 
 ## What the page says about trust
 
@@ -45,7 +49,7 @@ view (down-the-line or face-on); the app does not guess it.
   would serve your swing frames to anyone on the network. Do not change this without a
   reason.
 - Nothing is uploaded anywhere. Folders can be changed with `SWING_RAW_DIR`,
-  `SWING_OUT_DIR` and `SWING_LABELS_DIR`.
+  `SWING_OUT_DIR`, `SWING_LABELS_DIR` and `SWING_CACHE_DIR`.
 - The raw video and keypoints are gitignored, so there is no public hosted demo.
   Publishing one needs a clip you are happy to share.
 

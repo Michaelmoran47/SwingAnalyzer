@@ -109,6 +109,10 @@ def demo_dirs(tmp_path, monkeypatch):
     return tmp_path, truth
 
 
+def tmp_path_of(demo_dirs):
+    return demo_dirs[0]
+
+
 def _run():
     from streamlit.testing.v1 import AppTest
     return AppTest.from_file(str(APP), default_timeout=180).run()
@@ -125,6 +129,8 @@ def test_app_renders_saved_analysis(demo_dirs):
     assert abs(phases.loc["top", "frame"] - truth["top"]) <= 3
     assert phases.loc["top", "your label"] == truth["top"]
     assert any("swing_smooth.npz" in c.value and "smoothed" in c.value for c in at.sidebar.caption)
+    cache_files = list((tmp_path_of(demo_dirs) / "outputs" / ".frame_cache").glob("*.frames.npz"))
+    assert len(cache_files) == 1  # decoded frames were saved for the next launch
 
 
 def test_app_view_switch_changes_available_metrics(demo_dirs):

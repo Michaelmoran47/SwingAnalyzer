@@ -17,7 +17,7 @@ import streamlit as st
 
 from swing.demo import (analyze, find_clips, hand_figure, metric_table,
                         overlay_rgb, phase_table, usable_keypoint_files)
-from swing.io import load_jpeg_frames, probe_video
+from swing.io import cached_jpeg_frames, probe_video
 from swing.labels import PHASES, PhaseLabels
 from swing.pose import J, PoseSequence
 
@@ -25,6 +25,8 @@ RAW = os.environ.get("SWING_RAW_DIR", "data/raw")
 OUT = os.environ.get("SWING_OUT_DIR", "outputs")
 LABELS = os.environ.get("SWING_LABELS_DIR", "data/labels")
 IMG_HEIGHT = 720
+# Decoded frames are saved here (safe to delete); the first view of a clip fills it.
+CACHE = os.environ.get("SWING_CACHE_DIR", str(Path(OUT) / ".frame_cache"))
 
 st.set_page_config(page_title="Swing Analyzer", layout="wide")
 
@@ -34,9 +36,11 @@ def cached_probe(path: str, mtime: float):
     return probe_video(path)
 
 
-@st.cache_resource(show_spinner="Decoding frames (once per clip)...")
+@st.cache_resource(show_spinner="Loading frames. A clip's first time decodes them and saves a cache "
+                                "(about 1.5 minutes for a 1551-frame clip); later launches are quick...")
 def cached_frames(path: str, mtime: float, scale: float):
-    return load_jpeg_frames(path, scale)
+    frames, _ = cached_jpeg_frames(path, scale, CACHE)
+    return frames
 
 
 @st.cache_data
@@ -201,7 +205,11 @@ with tab_metrics:
     )
 
 with tab_traj:
-    st.pyplot(hand_figure(a))
+    # Streamlit runs every tab's code on each rerun; drawing takes ~0.5 s, so draw only on change.
+    fig_key = (data["source"], id(seq), view, window_s, min_conf, data["labels"] is not None)
+    if st.session_state.get("_fig_key") != fig_key:
+        st.session_state["_fig"], st.session_state["_fig_key"] = hand_figure(a), fig_key
+    st.pyplot(st.session_state["_fig"])
     st.caption("Mean of the available wrists, after smoothing. Solid lines mark the hand-validated phases "
                "(top, impact); dashed lines mark threshold-defined ones.")
 
