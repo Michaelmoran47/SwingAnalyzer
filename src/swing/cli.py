@@ -31,6 +31,30 @@ def _cmd_label(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_annotate_wrists(args: argparse.Namespace) -> int:
+    from swing.annotations import default_annotation_path, sample_frames
+    from swing.io import probe_video
+    from swing.labels import PhaseLabels, default_label_path
+    from swing.wrist_tool import run
+
+    start, end = args.start, args.end
+    lp = default_label_path(args.video)
+    if (start is None or end is None) and lp.exists():
+        lab = PhaseLabels.load(lp).labels
+        start = lab.get("takeaway") if start is None else start
+        end = lab.get("finish") if end is None else end
+    n = probe_video(args.video).frame_count
+    start = 0 if start is None else start
+    end = n - 1 if end is None else end
+    samples = sample_frames(start, end, args.step)
+    path = args.annotations or default_annotation_path(args.video)
+    print(f"{len(samples)} sample frames: {samples[0]}..{samples[-1]} every {args.step}")
+    ann = run(args.video, path, samples, tuple(args.crop_y) if args.crop_y else None, args.max_height)
+    done = [s for s in samples if s in ann.complete_frames()]
+    print(f"annotated both wrists on {len(done)}/{len(samples)} sample frames -> {path}")
+    return 0
+
+
 def _cmd_phases(args: argparse.Namespace) -> int:
     from swing.labels import PhaseLabels
     from swing.phases import compare, detect_phases
@@ -158,6 +182,18 @@ def main(argv: list[str] | None = None) -> int:
     pl.add_argument("--keypoints", help="optional .npz to show a skeleton (toggle with k)")
     pl.add_argument("--max-height", type=int, default=900, help="window height in px")
     pl.set_defaults(func=_cmd_label)
+
+    pa = sub.add_parser("annotate-wrists",
+                        help="click the wrists on every Nth frame (ground truth for scoring pose backends)")
+    pa.add_argument("video")
+    pa.add_argument("--annotations", help="output JSON (default data/annotations/<stem>_wrists.json)")
+    pa.add_argument("--start", type=int, help="first sample frame (default: takeaway label, else 0)")
+    pa.add_argument("--end", type=int, help="last sample frame (default: finish label, else last frame)")
+    pa.add_argument("--step", type=int, default=10, help="sample every Nth frame (default 10)")
+    pa.add_argument("--crop-y", type=int, nargs=2, metavar=("Y0", "Y1"),
+                    help="show only these rows (px) to magnify the golfer, e.g. 300 1500")
+    pa.add_argument("--max-height", type=int, default=1000, help="window height in px")
+    pa.set_defaults(func=_cmd_annotate_wrists)
 
     pp = sub.add_parser("phases", help="detect swing phases from a RAW keypoints .npz")
     pp.add_argument("keypoints", help=".npz from `swing overlay --keypoints` (unsmoothed)")
