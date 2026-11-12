@@ -214,17 +214,54 @@ Still one clip, one swing, no ground-truth keypoints.
   differ most between the runs; why was not investigated (the impact frame each run
   picked is 999, 996, 994).
 
-Implication: nothing in this clip shows RTMPose performance mode failing on the wrists
-(they are on the visible hands, and hidden-hand frames cannot be judged by eye), and
-nothing shows it beating balanced mode or MediaPipe on accuracy; confidence still cannot
-tell you when a wrist is wrong.
+Implication (by-eye checks only; the measured version is the next section): nothing in this
+clip shows RTMPose performance mode failing on the wrists; confidence still cannot tell
+you when a wrist is wrong.
+
+## Wrists scored against hand-clicked wrists
+
+`swing annotate-wrists` (one annotator, you) recorded where the golfer's wrists are on 39
+frames of `IMG_6004`, every 10th frame from your takeaway label (731) to 1111: 78 clicks,
+71 marked visible and 7 marked hidden (best guess, hand behind the body). The frame rule
+is fixed and independent of any model's output, and the tool shows no keypoints.
+`scripts/score_wrists.py` measures each backend's **raw** wrist to the click, in torso
+lengths (torso 344 px, from that script's usage example, not re-measured; 1 torso = 344 px).
+Annotations: `data/annotations/IMG_6004_wrists.json`.
+
+| backend | visible clicks: median / mean / p90 / max (torso) | median in px | hidden guesses (7): median / max (torso) |
+|---|---|---|---|
+| MediaPipe | 0.059 / 0.085 / 0.162 / 0.494 | 20.1 | 0.186 / 0.361 |
+| RTMPose balanced | 0.039 / 0.046 / 0.088 / 0.155 | 13.3 | 0.113 / 0.152 |
+| RTMPose performance | 0.027 / 0.033 / 0.049 / 0.179 | 9.4 | 0.061 / 0.237 |
+
+Paired over the 71 visible clicks, performance is closer than balanced on 50, closer than
+MediaPipe on 58, and balanced is closer than MediaPipe on 52. The largest MediaPipe
+misses are the frames seen by eye: right wrist 170 px (1051), 124 px hidden guess (1041),
+104 px (971). Mean signed offset (estimate minus click, px): RTMPose about zero
+(balanced 0.1, -0.7; performance 0.9, 0.2), MediaPipe (3.6, 4.2).
+
+How far to trust this:
+- **One swing, one annotator, 39 frames, wrists only.** A sanity check, not a benchmark.
+  Your click noise was not measured; the performance-versus-balanced gap (about 4 px
+  median) is small next to the width of a wrist, so treat that ordering as suggestive,
+  and the RTMPose-versus-MediaPipe gap (about 10 px median, much larger at the worst
+  frames) as the clearer result.
+- **The hidden guesses are guesses.** The seven hidden clicks are not ground truth; the
+  performance maximum there (0.237) is worse than balanced (0.152), so do not read
+  "performance wins" off hidden frames.
+- **You saw some model overlays (frames 1005, 1010, 1050, 1060) before finishing**, so
+  your clicks near those frames may be slightly anchored on them. Not quantified.
+- **Frame 921 (right wrist) is 53-62 px from the click for all three backends.** Unexplained
+  (hard frame, or the click); left in, not tuned away.
+- The scores use raw, unsmoothed keypoints, as the phases and metrics do.
 
 ## Open questions
 
 - Whether the wrist markers in the hidden-hand frames (about 1015-1035) are where the
   hands are. Needs a clearer view (a different camera angle) or hand-annotated keypoints.
-- Hand-annotated wrist positions on a few frames would turn the by-eye checks above into
-  a measured distance (planned next).
+- Second annotator, or the same annotator on another day, to measure click noise;
+  and more clips (ideally a face-on view where the hands are not hidden) to see whether
+  the performance-over-balanced ordering holds.
 - Physical plausibility checks (for example forearm length staying constant)
   could catch confident-but-wrong wrists that confidence misses.
 - More labelled swings, ideally with better light or a faster shutter, to say anything

@@ -1,0 +1,476 @@
+{
+  "video": "IMG_6004.MOV",
+  "fps": 239.45928548439008,
+  "frame_count": 1551,
+  "notes": "",
+  "wrists": {
+    "731": {
+      "left_wrist": {
+        "x": 405.6,
+        "y": 1090.8,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 439.2,
+        "y": 1135.2,
+        "visible": true
+      }
+    },
+    "741": {
+      "left_wrist": {
+        "x": 403.2,
+        "y": 1089.6,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 441.6,
+        "y": 1135.2,
+        "visible": true
+      }
+    },
+    "751": {
+      "left_wrist": {
+        "x": 414.0,
+        "y": 1092.0,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 440.4,
+        "y": 1140.0,
+        "visible": true
+      }
+    },
+    "761": {
+      "left_wrist": {
+        "x": 417.6,
+        "y": 1089.6,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 436.8,
+        "y": 1132.8,
+        "visible": true
+      }
+    },
+    "771": {
+      "left_wrist": {
+        "x": 416.4,
+        "y": 1104.0,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 438.0,
+        "y": 1141.2,
+        "visible": true
+      }
+    },
+    "781": {
+      "left_wrist": {
+        "x": 428.4,
+        "y": 1102.8,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 430.8,
+        "y": 1132.8,
+        "visible": true
+      }
+    },
+    "791": {
+      "left_wrist": {
+        "x": 433.2,
+        "y": 1092.0,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 417.6,
+        "y": 1118.4,
+        "visible": true
+      }
+    },
+    "801": {
+      "left_wrist": {
+        "x": 429.6,
+        "y": 1076.4,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 408.0,
+        "y": 1096.8,
+        "visible": true
+      }
+    },
+    "811": {
+      "left_wrist": {
+        "x": 434.4,
+        "y": 1064.4,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 398.4,
+        "y": 1074.0,
+        "visible": true
+      }
+    },
+    "821": {
+      "left_wrist": {
+        "x": 429.6,
+        "y": 1041.6,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 380.4,
+        "y": 1045.2,
+        "visible": true
+      }
+    },
+    "831": {
+      "left_wrist": {
+        "x": 421.2,
+        "y": 1009.2,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 363.6,
+        "y": 998.4,
+        "visible": true
+      }
+    },
+    "841": {
+      "left_wrist": {
+        "x": 410.4,
+        "y": 963.6,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 318.0,
+        "y": 914.4,
+        "visible": true
+      }
+    },
+    "851": {
+      "left_wrist": {
+        "x": 387.6,
+        "y": 896.4,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 277.2,
+        "y": 847.2,
+        "visible": true
+      }
+    },
+    "861": {
+      "left_wrist": {
+        "x": 362.4,
+        "y": 830.4,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 244.8,
+        "y": 781.2,
+        "visible": true
+      }
+    },
+    "871": {
+      "left_wrist": {
+        "x": 326.4,
+        "y": 746.4,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 223.2,
+        "y": 716.4,
+        "visible": true
+      }
+    },
+    "881": {
+      "left_wrist": {
+        "x": 286.8,
+        "y": 651.6,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 196.8,
+        "y": 642.0,
+        "visible": true
+      }
+    },
+    "891": {
+      "left_wrist": {
+        "x": 261.6,
+        "y": 574.8,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 188.4,
+        "y": 568.8,
+        "visible": true
+      }
+    },
+    "901": {
+      "left_wrist": {
+        "x": 226.8,
+        "y": 516.0,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 180.0,
+        "y": 543.6,
+        "visible": true
+      }
+    },
+    "911": {
+      "left_wrist": {
+        "x": 229.2,
+        "y": 487.2,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 190.8,
+        "y": 513.6,
+        "visible": true
+      }
+    },
+    "921": {
+      "left_wrist": {
+        "x": 188.4,
+        "y": 519.6,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 228.0,
+        "y": 477.6,
+        "visible": true
+      }
+    },
+    "931": {
+      "left_wrist": {
+        "x": 237.6,
+        "y": 499.2,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 198.0,
+        "y": 529.2,
+        "visible": true
+      }
+    },
+    "941": {
+      "left_wrist": {
+        "x": 237.6,
+        "y": 529.2,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 199.2,
+        "y": 542.4,
+        "visible": true
+      }
+    },
+    "951": {
+      "left_wrist": {
+        "x": 246.0,
+        "y": 564.0,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 199.2,
+        "y": 592.8,
+        "visible": true
+      }
+    },
+    "961": {
+      "left_wrist": {
+        "x": 294.0,
+        "y": 685.2,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 220.8,
+        "y": 666.0,
+        "visible": true
+      }
+    },
+    "971": {
+      "left_wrist": {
+        "x": 388.8,
+        "y": 862.8,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 289.2,
+        "y": 817.2,
+        "visible": true
+      }
+    },
+    "981": {
+      "left_wrist": {
+        "x": 453.6,
+        "y": 1003.2,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 396.0,
+        "y": 980.4,
+        "visible": true
+      }
+    },
+    "991": {
+      "left_wrist": {
+        "x": 457.2,
+        "y": 1058.4,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 456.0,
+        "y": 1096.8,
+        "visible": true
+      }
+    },
+    "1001": {
+      "left_wrist": {
+        "x": 405.6,
+        "y": 1032.0,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 456.0,
+        "y": 1081.2,
+        "visible": true
+      }
+    },
+    "1011": {
+      "left_wrist": {
+        "x": 366.0,
+        "y": 967.2,
+        "visible": false
+      },
+      "right_wrist": {
+        "x": 411.6,
+        "y": 1004.4,
+        "visible": true
+      }
+    },
+    "1021": {
+      "left_wrist": {
+        "x": 345.6,
+        "y": 828.0,
+        "visible": false
+      },
+      "right_wrist": {
+        "x": 380.4,
+        "y": 859.2,
+        "visible": false
+      }
+    },
+    "1031": {
+      "left_wrist": {
+        "x": 302.4,
+        "y": 722.4,
+        "visible": false
+      },
+      "right_wrist": {
+        "x": 342.0,
+        "y": 759.6,
+        "visible": false
+      }
+    },
+    "1041": {
+      "left_wrist": {
+        "x": 270.0,
+        "y": 696.0,
+        "visible": false
+      },
+      "right_wrist": {
+        "x": 304.8,
+        "y": 661.2,
+        "visible": false
+      }
+    },
+    "1051": {
+      "left_wrist": {
+        "x": 256.8,
+        "y": 638.4,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 285.6,
+        "y": 585.6,
+        "visible": true
+      }
+    },
+    "1061": {
+      "left_wrist": {
+        "x": 238.8,
+        "y": 589.2,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 276.0,
+        "y": 549.6,
+        "visible": true
+      }
+    },
+    "1071": {
+      "left_wrist": {
+        "x": 226.8,
+        "y": 561.6,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 283.2,
+        "y": 525.6,
+        "visible": true
+      }
+    },
+    "1081": {
+      "left_wrist": {
+        "x": 220.8,
+        "y": 542.4,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 295.2,
+        "y": 532.8,
+        "visible": true
+      }
+    },
+    "1091": {
+      "left_wrist": {
+        "x": 228.0,
+        "y": 523.2,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 306.0,
+        "y": 547.2,
+        "visible": true
+      }
+    },
+    "1101": {
+      "left_wrist": {
+        "x": 236.4,
+        "y": 523.2,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 313.2,
+        "y": 564.0,
+        "visible": true
+      }
+    },
+    "1111": {
+      "left_wrist": {
+        "x": 258.0,
+        "y": 520.8,
+        "visible": true
+      },
+      "right_wrist": {
+        "x": 319.2,
+        "y": 564.0,
+        "visible": true
+      }
+    }
+  }
+}
