@@ -164,3 +164,43 @@ def test_app_normal_clip_shows_no_slowdown_warning_or_override_notice(demo_dirs)
     at = _run()
     assert not any("real-time swing" in w.value for w in at.warning)
     assert not at.error and not any("Timings assume" in i.value for i in at.info)
+
+
+# ---- "was this clip slowed down?" scan ------------------------------------------
+
+def test_slowdown_scan_marks_the_stretched_clip_and_finds_the_right_assumption():
+    from swing.demo import slowdown_scan
+
+    stretched, truth = _stretched_seq()
+    rows = {r["slowed by"]: r for r in slowdown_scan(stretched, "dtl")}
+    assert rows["1x"]["real-time swing?"] == "no" and rows["1x"]["tempo ratio"] is None
+    r8 = rows["8x"]  # 29.9 fps x 8 = 239 fps: what the synthetic swing really is
+    assert r8["real-time swing?"] == "yes"
+    assert abs(r8["top (frame)"] - truth["top"]) <= 3 and abs(r8["impact (frame)"] - truth["impact"]) <= 3
+    assert 0.4 < r8["backswing (s)"] < 1.2 and r8["tempo ratio"] is not None
+    assert rows["8x"]["assumed capture fps"] == pytest.approx(STAMPED * 8, abs=0.1)
+
+
+def test_slowdown_scan_on_a_normal_clip_agrees_with_the_plain_analysis():
+    from swing.demo import slowdown_scan
+
+    right, _ = _scaled_seq()
+    rows = {r["slowed by"]: r for r in slowdown_scan(right, "dtl", factors=(1,))}
+    ref = analyze(right, "dtl")
+    assert rows["1x"]["top (frame)"] == ref.phases.frames["top"]
+    assert rows["1x"]["tempo ratio"] == pytest.approx(round(ref.metrics.values["tempo_ratio"], 2))
+
+
+def test_app_offers_the_scan_for_a_stretched_clip_but_not_for_a_high_rate_clip(stretched_dirs):
+    at = _run()
+    assert not at.exception
+    assert any("Was this clip slowed down" in e.label for e in at.expander)
+    labels = list(_fps_box(at).options)
+    assert any("240 fps capture (file slowed 8.0x)" in o for o in labels)
+    assert labels[0].startswith("As stamped in the file")
+
+
+def test_app_has_no_scan_for_a_normal_high_rate_clip(demo_dirs):  # noqa: F811
+    at = _run()
+    assert not any("Was this clip slowed down" in e.label for e in at.expander)
+    assert len(list(_fps_box(at).options)) <= 3  # stamped rate plus at most the higher real rates

@@ -72,6 +72,34 @@ def analyze(seq: PoseSequence, view: str, window_s: float = 0.06, min_conf: floa
     return Analysis(seq, smooth, phases, compute_metrics(smooth, phases, view), view, labels, stamped)
 
 
+def slowdown_scan(seq: PoseSequence, view: str, window_s: float = 0.06, min_conf: float = 0.3,
+                  factors: tuple[int, ...] = (1, 2, 4, 8, 16)) -> list[dict]:
+    """What the analysis would say if the clip had been slowed down by each factor.
+
+    A slow-motion clip keeps many frames per swing, but a re-timed file stores only its
+    playback rate, so the real slowdown is unknown. Each row re-runs the analysis with the
+    file's frame rate multiplied by ``factor`` (so ``factor`` = 1 is the file as stamped).
+    The rows show which assumptions give a believable swing and how much the frames and the
+    tempo ratio depend on the choice; they do not say which row is true.
+    """
+    rows = []
+    for k in factors:
+        a = analyze(seq, view, window_s, min_conf, capture_fps=seq.fps * k)
+        v, f = a.metrics.values, a.phases.frames
+        rows.append({
+            "assumed capture fps": round(seq.fps * k, 1),
+            "slowed by": f"{k}x",
+            "real-time swing?": "yes" if a.phases.plausible else "no",
+            "top (frame)": f.get("top"),
+            "impact (frame)": f.get("impact"),
+            "finish (frame)": f.get("finish"),
+            "backswing (s)": None if v.get("backswing_s") is None else round(v["backswing_s"], 2),
+            "downswing (s)": None if v.get("downswing_s") is None else round(v["downswing_s"], 2),
+            "tempo ratio": None if v.get("tempo_ratio") is None else round(v["tempo_ratio"], 2),
+        })
+    return rows
+
+
 def phase_table(a: Analysis) -> list[dict]:
     errs = {e.phase: e for e in compare(a.phases, a.labels)} if a.labels else {}
     rows = []

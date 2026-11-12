@@ -16,7 +16,7 @@ from pathlib import Path
 import streamlit as st
 
 from swing.demo import (analyze, find_clips, hand_figure, metric_table, overlay_rgb, phase_table,
-                        safe_clip_name, save_upload, usable_keypoint_files)
+                        safe_clip_name, save_upload, slowdown_scan, usable_keypoint_files)
 from swing.io import cached_jpeg_frames, load_jpeg_frames, probe_video, store_jpeg_frames
 from swing.labels import PHASES, PhaseLabels
 from swing.phases import PhaseParams
@@ -159,11 +159,10 @@ for w in info.warnings:
     st.caption(f"video: {w}")
 
 stamped = float(seq.fps)
-FPS_CHOICES = {
-    "stamped": f"As stamped in the file ({stamped:.1f} fps)",
-    "240": "240 fps slo-mo, clip re-timed to play slowly",
-    "120": "120 fps slo-mo, clip re-timed to play slowly",
-}
+FPS_CHOICES = {"stamped": f"As stamped in the file ({stamped:.1f} fps)"}
+for n_fps in (60, 120, 240, 480, 960):  # real capture rates the file could have been slowed from
+    if n_fps > stamped * 1.2:
+        FPS_CHOICES[str(n_fps)] = f"{n_fps} fps capture (file slowed {n_fps / stamped:.1f}x)"
 fps_choice = st.sidebar.selectbox(
     "Capture frame rate", list(FPS_CHOICES), format_func=FPS_CHOICES.get, key=f"fps_{data['source']}",
     help="Phase detection and metrics need the real capture rate. Leave this on the file's rate "
@@ -183,6 +182,16 @@ if capture_fps is not None:
 elif fps_used < 100 and a.phases.plausible:
     st.caption(f"Frame rate {fps_used:.0f} fps: one frame is {1000 / fps_used:.0f} ms, so phase times "
                "are only good to about one frame. Pose estimation on blurred frames is less reliable.")
+if capture_fps is None and stamped < 100:
+    with st.expander("Was this clip slowed down? What changes if it was", expanded=not a.phases.plausible):
+        st.markdown(
+            "A slow-motion clip keeps plenty of frames per swing, but when it has been re-timed to play "
+            "slowly the file only stores the playback rate, so **how much it was slowed is unknown**. "
+            "Each row re-runs the analysis as if the clip had been slowed by that factor. Rows marked "
+            "*no* cannot be a real-time swing. The frames and the tempo ratio usually move little across "
+            "the rows marked *yes*; the seconds scale directly with the assumption. This does not say "
+            "which row is true: pick the capture rate your camera recorded at in the sidebar.")
+        st.dataframe(slowdown_scan(seq, view, window_s, min_conf), hide_index=True, use_container_width=True)
 scale = min(1.0, IMG_HEIGHT / info.height)
 jpegs = cached_frames(str(data["video"]), _mtime(data["video"]), scale, mode == "Saved analysis")
 
