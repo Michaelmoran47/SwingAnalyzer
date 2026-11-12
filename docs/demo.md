@@ -11,6 +11,10 @@ streamlit run app/streamlit_app.py
 
 Run it from the repo root. The page opens at `http://127.0.0.1:8501`.
 
+On Windows, `scripts/run_demo.bat` does the same and opens the browser for you; close its
+window to stop the demo. To make a desktop shortcut to it, right-click the file, choose
+Show more options, then Send to, then Desktop (create shortcut).
+
 ## Two ways in
 
 - **Saved analysis.** Lists videos in `data/raw/` and, for each, the keypoint files in
