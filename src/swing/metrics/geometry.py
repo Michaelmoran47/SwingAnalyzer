@@ -73,4 +73,6 @@ def arccos_ratio_deg(w: np.ndarray, w_ref: float) -> np.ndarray:
     rotates about the vertical axis. Unsigned, and ambiguous past 90 degrees.
     A proxy, not a measured rotation.
     """
+    if not np.isfinite(w_ref) or w_ref <= 0:
+        return np.full(np.shape(w), np.nan)  # reference width unusable: no proxy
     return np.degrees(np.arccos(np.clip(w / w_ref, 0.0, 1.0)))

@@ -7,7 +7,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from swing.io import iter_frames, probe_video
+from swing.io import load_jpeg_frames, probe_video
 from swing.labels import PHASES, PhaseLabels, default_label_path
 from swing.pose import PoseSequence
 from swing.render import draw_skeleton
@@ -25,15 +25,6 @@ HELP = [
     "backspace: clear label here | u: undo",
     "k: toggle skeleton | h: toggle help | Esc: save & quit",
 ]
-
-
-def _load_jpegs(video: Path, scale: float, quality: int = 92) -> list[bytes]:
-    """Decode once, keep JPEG bytes in memory (a full-res clip would need GBs)."""
-    out = []
-    for _, frame in iter_frames(video):
-        small = cv2.resize(frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
-        out.append(cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, quality])[1].tobytes())
-    return out
 
 
 def _text(img, s, org, color=(255, 255, 255), size=0.6):
@@ -55,7 +46,7 @@ def run(video: str | Path, label_path: str | Path | None = None,
 
     scale = min(1.0, max_height / info.height)
     print(f"decoding {info.frame_count} frames...", flush=True)
-    jpegs = _load_jpegs(video, scale)
+    jpegs = load_jpeg_frames(video, scale, quality=92)
     seq = PoseSequence.load(keypoints) if keypoints else None
     show_skel, show_help, idx = seq is not None, True, 0
     win = f"label: {video.name}"

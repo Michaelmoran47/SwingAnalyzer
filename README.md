@@ -1,14 +1,14 @@
 # SwingAnalyzer
 
 Golf swing analysis from phone video: pose estimation → smoothing → phase
-detection → metrics, as a core Python library with a CLI (Streamlit demo planned).
+detection → metrics, as a core Python library with a CLI and a local Streamlit demo.
 
-**Status: milestones 0-5.** Ingest, skeleton overlay,
+**Status: milestones 0-6.** Ingest, skeleton overlay,
 smoothing, rule-based phase detection and view-aware metrics work and are
 unit-tested. Validation so far is one hand-labelled swing, so nothing here is an
 accuracy result. Both pose backends (MediaPipe, RTMPose) are implemented and
-compared on that clip ([docs/rtmpose.md](docs/rtmpose.md)). The Streamlit demo and
-multi-clip validation are not built yet. No results are reported in this README: every
+compared on that clip ([docs/rtmpose.md](docs/rtmpose.md)). A local Streamlit demo ([docs/demo.md](docs/demo.md)) shows one swing. Multi-clip
+validation is not done. No results are reported in this README: every
 number that appears here will come from a script in this repo.
 
 ## Scope
@@ -28,7 +28,7 @@ Python 3.10+.
 ```bash
 python -m venv .venv
 .venv/Scripts/activate          # Windows; use `source .venv/bin/activate` elsewhere
-pip install -e ".[mediapipe,rtmpose,dev]"
+pip install -e ".[mediapipe,rtmpose,demo,dev]"
 ```
 
 MediaPipe pinned to 0.10.21 for the legacy `mp.solutions.pose` API. The default
@@ -40,6 +40,7 @@ heavy model (complexity 2) is downloaded by MediaPipe on first use.
 swing info data/raw/2026-11-11_7i_dtl_01.MOV
 swing overlay data/raw/2026-11-11_7i_dtl_01.MOV -o outputs/overlay.mp4 --keypoints outputs/kps.npz
 swing label data/raw/2026-11-11_7i_dtl_01.MOV   # hand-label phases, see docs/labelling.md
+streamlit run app/streamlit_app.py              # local demo, see docs/demo.md
 ```
 
 The overlay keeps the source frame rate, so slo-mo stays slo-mo. Lead (left) side
@@ -75,5 +76,5 @@ pytest
 3. Rule-based phase detection ✅ implemented (`swing phases`). Top and impact are scored against hand labels; address, takeaway and finish are threshold-defined, see [docs/phase_definitions.md](docs/phase_definitions.md). Validation so far: one labelled swing, so a sanity check, not an accuracy result
 4. Metrics v1 ✅ implemented and unit-tested, view-aware (`swing metrics`), see [docs/metrics.md](docs/metrics.md). Not validated against reference measurements
 5. RTMPose backend and benchmark ✅ implemented; compared on one clip, see [docs/rtmpose.md](docs/rtmpose.md) and [docs/benchmark.md](docs/benchmark.md). Not an accuracy ranking
-6. Streamlit demo
+6. Streamlit demo ✅ local, see [docs/demo.md](docs/demo.md)
 7. Stretch: SwingNet phase model, 3D lifting

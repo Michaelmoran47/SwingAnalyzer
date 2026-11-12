@@ -21,6 +21,8 @@ dependencies = [
 mediapipe = ["mediapipe==0.10.21"]
 # CPU runtime. For an NVIDIA GPU install onnxruntime-gpu instead of onnxruntime.
 rtmpose = ["rtmlib>=0.0.13", "onnxruntime>=1.16"]
+# streamlit is pinned: newer releases need protobuf>=5.26, which breaks mediapipe 0.10.21 (protobuf<5).
+demo = ["streamlit==1.40.2", "protobuf>=4.25.3,<5", "matplotlib>=3.7"]
 plots = ["matplotlib>=3.7"]
 dev = ["pytest>=7"]
 

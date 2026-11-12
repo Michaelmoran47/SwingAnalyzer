@@ -130,3 +130,15 @@ def iter_frames(
             idx += 1
     finally:
         cap.release()
+
+
+def load_jpeg_frames(
+    path: str | Path, scale: float, start: int = 0, end: int | None = None, quality: int = 90
+) -> list[bytes]:
+    """Decode ``[start, end)`` once, downscale, keep JPEG bytes (full-res clips need GBs raw)."""
+    out = []
+    for _, frame in iter_frames(path, start, end):
+        small = cv2.resize(frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+        out.append(cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, quality])[1].tobytes())
+    return out
+

@@ -169,3 +169,14 @@ def test_missing_phase_reports_reason_instead_of_guessing():
 def test_sequence_start_frame_offset():
     seq, ph = make_seq(start_frame=500, spine=(35, 35, 33, 25, 25))
     assert compute_metrics(seq, ph, "dtl").values["spine_angle_impact_deg"] == pytest.approx(25, abs=0.01)
+
+
+def test_rotation_proxy_unavailable_not_crashing_when_reference_width_is_zero():
+    import warnings
+
+    seq, ph = make_seq(sh_w=(0,) * 5)  # shoulders at the same point at address
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # no divide warnings
+        r = compute_metrics(seq, ph, "fo")
+    assert r.values["shoulder_turn_proxy_top_deg"] is None
+    assert r.values["hip_turn_proxy_top_deg"] is not None
