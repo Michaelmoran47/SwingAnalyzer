@@ -1,4 +1,4 @@
-import numpy as np
+﻿import numpy as np
 import pytest
 
 from swing.pose import get_estimator
@@ -76,6 +76,64 @@ def test_cuda_requested_without_cuda_provider_fails_loudly(monkeypatch):
                         lambda: ["CUDAExecutionProvider", "CPUExecutionProvider"])
     check_device("cuda")  # fine when available
 
+
+
+class _FakeSession:
+    """Stands in for an onnxruntime session; ``after_run`` is what it reports post-run."""
+
+    def __init__(self, after_run):
+        self._providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+        self._after_run = after_run
+
+    def get_inputs(self):
+        class _In:
+            name, shape = "x", [1, 3, "h", 8]
+
+        return [_In()]
+
+    def run(self, _outputs, feed):
+        assert feed["x"].shape == (1, 3, 1, 8)  # dynamic dims become 1
+        self._providers = self._after_run
+
+    def get_providers(self):
+        return self._providers
+
+
+class _FakeSub:
+    def __init__(self, after_run):
+        self.session = _FakeSession(after_run)
+
+
+class _FakeBody:
+    def __init__(self, det_after, pose_after):
+        self.det_model, self.pose_model = _FakeSub(det_after), _FakeSub(pose_after)
+
+
+_GPU = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+
+
+def test_verify_gpu_execution_accepts_sessions_that_stay_on_gpu():
+    from swing.pose.rtmpose_backend import verify_gpu_execution
+
+    verify_gpu_execution(_FakeBody(_GPU, _GPU))
+
+
+@pytest.mark.parametrize("which", ["det_model", "pose_model"])
+def test_verify_gpu_execution_catches_silent_cpu_fallback(which):
+    """onnxruntime retries a failed GPU run on the CPU and relabels the session."""
+    from swing.pose.rtmpose_backend import verify_gpu_execution
+
+    cpu = ["CPUExecutionProvider"]
+    body = _FakeBody(cpu if which == "det_model" else _GPU, cpu if which == "pose_model" else _GPU)
+    with pytest.raises(RuntimeError, match=f"{which} ran on .*CPUExecutionProvider"):
+        verify_gpu_execution(body)
+
+
+def test_verify_gpu_execution_refuses_to_guess_when_rtmlib_api_changes():
+    from swing.pose.rtmpose_backend import verify_gpu_execution
+
+    with pytest.raises(RuntimeError, match="cannot verify"):
+        verify_gpu_execution(object())
 
 def test_estimator_construction_checks_device(monkeypatch):
     import onnxruntime as ort

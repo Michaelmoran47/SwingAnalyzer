@@ -1,4 +1,4 @@
-"""RTMPose backend via rtmlib + ONNX Runtime.
+﻿"""RTMPose backend via rtmlib + ONNX Runtime.
 
 Top-down: a YOLOX person detector, then RTMPose on the best box. Output is
 COCO-17, the same joint set the rest of the pipeline uses, so no remapping.
@@ -53,6 +53,11 @@ def check_device(device: str) -> None:
         return
     import onnxruntime as ort
 
+    # With CUDA/cuDNN installed as pip packages (nvidia-*-cu12), their DLLs are not on
+    # PATH; without this preload the CUDA provider silently falls back to the CPU.
+    if hasattr(ort, "preload_dlls"):
+        ort.preload_dlls(directory="")
+
     providers = ort.get_available_providers()
     if "CUDAExecutionProvider" not in providers:
         raise RuntimeError(
@@ -60,6 +65,35 @@ def check_device(device: str) -> None:
             f"(available: {', '.join(providers)}). Install onnxruntime-gpu (and remove "
             "plain onnxruntime) with a matching CUDA/cuDNN, or use --device cpu."
         )
+
+
+def verify_gpu_execution(model) -> None:
+    """Run each of the model's ONNX sessions once and check they stayed on the GPU.
+
+    ``CUDAExecutionProvider`` being listed, and even a session reporting it, is not
+    enough. onnxruntime's Python ``run()`` catches a GPU kernel failure (here: "Failed
+    to initialize CUDNN Frontend" on Conv nodes with cuDNN 9.28 + onnxruntime-gpu
+    1.22.0), prints "EP Error", retries on the CPU and then relabels the session as
+    CPU. The run completes, about 15x slower than the GPU (~1.5 s/frame measured),
+    with the GPU idle. Checking the providers *after* a real run exposes it.
+    """
+    for name in ("det_model", "pose_model"):
+        sess = getattr(getattr(model, name, None), "session", None)
+        if sess is None:  # rtmlib internals changed: cannot verify, do not guess
+            raise RuntimeError(
+                f"cannot verify GPU execution: model has no {name}.session (rtmlib API changed?)"
+            )
+        inp = sess.get_inputs()[0]
+        shape = [d if isinstance(d, int) else 1 for d in inp.shape]
+        sess.run(None, {inp.name: np.zeros(shape, np.float32)})
+        used = sess.get_providers()
+        if not used or used[0] != "CUDAExecutionProvider":
+            raise RuntimeError(
+                f"device='cuda' requested but the {name} ran on {used} after a test run "
+                "(onnxruntime fell back to the CPU, about 15x slower). Check that the CUDA 12 "
+                "+ cuDNN 9 stack matches onnxruntime-gpu (tested: onnxruntime-gpu 1.22.0 with "
+                "nvidia-cudnn-cu12 9.10.2.21; cuDNN 9.28 fails), or use --device cpu."
+            )
 
 
 class RTMPoseEstimator(PoseEstimator):
@@ -79,6 +113,8 @@ class RTMPoseEstimator(PoseEstimator):
                     "RTMPose backend needs the 'rtmpose' extra: pip install -e .[rtmpose]"
                 ) from e
             model = Body(mode=mode, to_openpose=False, backend="onnxruntime", device=device)
+            if device.startswith("cuda"):
+                verify_gpu_execution(model)
         self._model = model
         self.mode, self.device = mode, device
 
