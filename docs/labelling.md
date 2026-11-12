@@ -24,6 +24,7 @@ code uses (see `swing info`), not the header frame count.
 | ↑ / ↓ or `w` / `s` | ±10 frames |
 | PgUp / PgDn or `q` / `e` | ±50 frames |
 | `1`–`5` | set address, takeaway, top, impact, finish at this frame |
+| `6` | set shaft_parallel (optional, experimental) at this frame |
 | Backspace / Delete | clear the label on this frame |
 | `u` | undo last label change |
 | `k` / `h` | toggle skeleton / help |
@@ -54,6 +55,10 @@ Work with +-1 frame (about 4 ms at 240 fps) in mind: pick a rule and apply it th
    take the later frame (the first where the ball has visibly moved, or the club is past the ball).
 5. **finish**: the first frame where the follow-through is complete and the golfer holds a stable
    finish, even if the club is still settling.
+
+6. **shaft_parallel** (optional, experimental): in the backswing, the first frame the club shaft is
+   parallel to the ground (the club head level with the hands). It lies between the takeaway and the
+   top. See [shaft_parallel.md](shaft_parallel.md).
 
 Phases must be in this order with strictly increasing frame numbers; the tool flags violations
 in red.

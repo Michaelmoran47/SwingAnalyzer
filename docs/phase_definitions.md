@@ -50,6 +50,11 @@ detector cannot tell it from a takeaway (the recording is 28 frames early, which
 A clip needs a quiet stretch before the swing; one that starts mid-motion falls back to the wrists.
 Shaft-parallel (the end of the takeaway in coaching language) is not detected or labelled yet.
 
+## Experimental: shaft parallel
+
+An image-based estimate of the backswing frame where the club shaft is level, off by default and not
+scored (see [shaft_parallel.md](shaft_parallel.md)).
+
 ## Threshold-defined, not scored: address, finish
 
 | Phase | Rule (defaults in `PhaseParams`) |

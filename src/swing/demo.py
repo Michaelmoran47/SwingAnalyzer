@@ -16,7 +16,7 @@ from swing.labels import PHASES, PhaseLabels
 from swing.metrics import MetricReport, compute_metrics
 from swing.phases import PhaseResult, compare, detect_phases
 from swing.phases.detect import hand_signal
-from swing.phases.evaluate import VALIDATED_PHASES
+from swing.phases.evaluate import EXPERIMENTAL_PHASES, VALIDATED_PHASES
 from swing.pose import PoseSequence
 from swing.render import draw_skeleton
 from swing.smoothing import smooth_sequence
@@ -56,6 +56,7 @@ class Analysis:
     impact_note: str = "impact from the hands"  # where the impact frame came from (see apply_ball_cue)
     impact_from_ball: bool = False
     ball_cue: object | None = None  # swing.impact_cue.BallCue when a cue was attempted
+    shaft_note: str = ""  # what the experimental shaft-parallel estimate did (empty if not tried)
 
 
 def analyze(seq: PoseSequence, view: str, window_s: float = 0.06, min_conf: float = 0.3,
@@ -89,6 +90,51 @@ def apply_ball_cue(a: Analysis, cue) -> Analysis:
     from_ball = phases is not a.phases
     metrics = compute_metrics(a.smooth, phases, a.view) if from_ball else a.metrics
     return replace(a, phases=phases, metrics=metrics, impact_note=note, impact_from_ball=from_ball, ball_cue=cue)
+
+
+def apply_shaft_cue(a: Analysis, cue) -> Analysis:
+    """Fill in the experimental ``shaft_parallel`` frame when the estimate fits between takeaway and top."""
+    from swing.shaft import refine_shaft
+
+    if cue is None:
+        return a
+    phases, note = refine_shaft(a.phases, cue)
+    return replace(a, phases=phases, shaft_note=note)
+
+
+def shaft_cue_cached(video: str | Path, a: Analysis, cache_dir: str | Path):
+    """Run the shaft-parallel estimate for ``a``'s phases on ``video``, remembering the answer on disk."""
+    import hashlib
+    import json
+
+    from swing.shaft import ShaftCue, shaft_cue
+
+    video, cache_dir = Path(video), Path(cache_dir)
+    f = a.phases.frames
+    st = video.stat()
+    kp = a.smooth.keypoints
+    raw = "|".join(str(x) for x in ("shaft1", video.resolve(), st.st_size, st.st_mtime_ns, f.get("takeaway"),
+                                    f.get("top"), kp.shape, round(float(np.nansum(kp[:, :, :2])), 1)))
+    entry = cache_dir / f"{video.stem}_{hashlib.sha1(raw.encode()).hexdigest()[:16]}.shaft.json"
+    if entry.is_file():
+        try:
+            d = json.loads(entry.read_text())
+            return ShaftCue(d["frame"], tuple(d["bracket"]) if d["bracket"] else None, d["readings"],
+                            d["low_confidence"], d["note"])
+        except Exception:
+            pass
+    cue = shaft_cue(video, a.smooth, f)
+    try:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        entry.write_text(json.dumps({"frame": cue.frame, "bracket": list(cue.bracket) if cue.bracket else None,
+                                     "readings": cue.readings, "low_confidence": cue.low_confidence,
+                                     "note": cue.note}))
+        for old in cache_dir.glob(f"{video.stem}_*.shaft.json"):
+            if old != entry:
+                old.unlink(missing_ok=True)
+    except OSError:
+        pass
+    return cue
 
 
 def ball_cue_cached(video: str | Path, a: Analysis, cache_dir: str | Path):
@@ -162,6 +208,8 @@ def _phase_source(a: Analysis, phase: str) -> str:
     """Where a phase frame came from, for the table."""
     if phase == "impact":
         return "the ball leaving the tee (picture)" if a.impact_from_ball else "the hands"
+    if phase == "shaft_parallel":
+        return a.phases.sources.get("shaft_parallel", "not estimated")
     src = a.phases.sources.get("takeaway", "")
     if phase == "takeaway":
         return src or "the hands"
@@ -180,8 +228,9 @@ def phase_table(a: Analysis) -> list[dict]:
             "phase": p,
             "frame": f,
             "time (s)": None if f is None else round(f / a.smooth.fps, 3),
-            "status": "scored against your hand labels (one swing)" if p in VALIDATED_PHASES
-                      else "threshold-defined (not scored)",
+            "status": ("scored against your hand labels (few swings)" if p in VALIDATED_PHASES
+                       else "experimental estimate from the picture (not scored)" if p in EXPERIMENTAL_PHASES
+                       else "threshold-defined (not scored)"),
             "from": _phase_source(a, p),
             "your label": None if e is None else (e.label_text if e.acceptable else e.labelled),
             "error (ms)": None if e is None or e.error_ms is None else round(e.error_ms, 1),

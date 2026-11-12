@@ -121,6 +121,6 @@ def test_compare_scores_a_range_as_zero_inside_and_distance_outside():
     rows = {e.phase: e for e in compare(PhaseResult({"takeaway": 129, "top": 202, "impact": 270}, 240.0), lab)}
     assert rows["top"].error_frames == 0 and rows["top"].label_text == "190-250"
     assert rows["takeaway"].error_frames == 37 and rows["takeaway"].label_text == "92"
-    early = compare(PhaseResult({"top": 180}, 240.0), lab)[2]
-    late = compare(PhaseResult({"top": 260}, 240.0), lab)[2]
+    early = {e.phase: e for e in compare(PhaseResult({"top": 180}, 240.0), lab)}["top"]
+    late = {e.phase: e for e in compare(PhaseResult({"top": 260}, 240.0), lab)}["top"]
     assert early.error_frames == -10 and late.error_frames == 10

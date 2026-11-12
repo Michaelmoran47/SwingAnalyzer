@@ -14,7 +14,10 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-PHASES: tuple[str, ...] = ("address", "takeaway", "top", "impact", "finish")
+# shaft_parallel (backswing) is optional and experimental; the five CORE_PHASES are what a
+# complete label set needs.
+PHASES: tuple[str, ...] = ("address", "takeaway", "shaft_parallel", "top", "impact", "finish")
+CORE_PHASES: tuple[str, ...] = ("address", "takeaway", "top", "impact", "finish")
 
 
 @dataclass
@@ -83,7 +86,7 @@ class PhaseLabels:
 
     @property
     def complete(self) -> bool:
-        return all(self.reference(p) is not None for p in PHASES) and not self.problems()
+        return all(self.reference(p) is not None for p in CORE_PHASES) and not self.problems()
 
     def save(self, path: str | Path) -> None:
         path = Path(path)

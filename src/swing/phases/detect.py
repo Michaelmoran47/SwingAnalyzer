@@ -115,7 +115,7 @@ def detect_phases_from_hands(
     p = params
     T = len(hands)
     frames: dict[str, int | None] = {k: None for k in
-                                    ("address", "takeaway", "top", "impact", "finish")}
+                                    ("address", "takeaway", "shaft_parallel", "top", "impact", "finish")}
     warn: list[str] = []
     res = PhaseResult(frames, fps, warn)
 
@@ -217,7 +217,7 @@ def plausibility_issues(frames: dict[str, int | None], fps: float,
     Catches phases out of order or sharing a frame, and backswing/downswing durations
     outside ``params.*_range_s``. A clip slowed down several times fails these.
     """
-    order = ["address", "takeaway", "top", "impact", "finish"]
+    order = ["address", "takeaway", "shaft_parallel", "top", "impact", "finish"]
     present = [(n, frames[n]) for n in order if frames.get(n) is not None]
     issues = []
     if any(b <= a for (_, a), (_, b) in zip(present, present[1:])):

@@ -74,11 +74,18 @@ def _cmd_phases(args: argparse.Namespace) -> int:
         from swing.impact_cue import ball_cue, refine_impact
 
         res, ball_note = refine_impact(res, ball_cue(args.video, seq, res.frames))
+    shaft_note = None
+    if args.shaft:
+        if not args.video:
+            raise ValueError("--shaft needs --video (the club is found in the picture)")
+        from swing.shaft import refine_shaft, shaft_cue
+
+        res, shaft_note = refine_shaft(res, shaft_cue(args.video, seq, res.frames))
     labels = PhaseLabels.load(args.labels) if args.labels else None
     rows = {e.phase: e for e in compare(res, labels)} if labels else {}
-    print(f"{'phase':10} {'frame':>6} {'time_s':>7}" + (f" {'label':>7} {'err_fr':>7} {'err_ms':>8}  scored" if labels else ""))
+    print(f"{'phase':14} {'frame':>6} {'time_s':>7}" + (f" {'label':>7} {'err_fr':>7} {'err_ms':>8}  scored" if labels else ""))
     for ph, f in res.frames.items():
-        line = f"{ph:10} {'-' if f is None else f:>6} {'-' if f is None else format(f / seq.fps, '.3f'):>7}"
+        line = f"{ph:14} {'-' if f is None else f:>6} {'-' if f is None else format(f / seq.fps, '.3f'):>7}"
         if labels:
             e = rows[ph]
             line += (f" {e.label_text:>7}"
@@ -90,7 +97,11 @@ def _cmd_phases(args: argparse.Namespace) -> int:
         print(f"warning: {w}")
     if ball_note:
         print(f"note: {ball_note}")
-    return 0 if all(v is not None for v in res.frames.values()) else 1
+    if shaft_note:
+        print(f"note (experimental): {shaft_note}")
+    from swing.labels import CORE_PHASES
+
+    return 0 if all(res.frames.get(p) is not None for p in CORE_PHASES) else 1
 
 
 def _cmd_metrics(args: argparse.Namespace) -> int:
@@ -223,6 +234,8 @@ def main(argv: list[str] | None = None) -> int:
     pp.add_argument("--no-smooth", action="store_true", help="input is already smoothed")
     pp.add_argument("--video", help="the clip itself: refine impact from the ball leaving the tee "
                     "(reads the video; falls back to the hands if no ball is found)")
+    pp.add_argument("--shaft", action="store_true", help="also estimate the shaft-parallel checkpoint "
+                    "in the backswing from the picture (EXPERIMENTAL, unvalidated; needs --video)")
     pp.add_argument("--fps", type=float, help="capture frame rate to use instead of the file's, "
                     "for slo-mo clips re-timed to play slowly (e.g. 240). Your claim; not verified")
     pp.set_defaults(func=_cmd_phases)

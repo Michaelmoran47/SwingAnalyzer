@@ -12,6 +12,8 @@ from swing.phases.detect import PhaseResult
 # docs/phase_definitions.md): they are gradual events. Takeaway joined once it was detected
 # from whole-body motion and labelled on three swings.
 VALIDATED_PHASES: tuple[str, ...] = ("takeaway", "top", "impact")
+# Image-based estimates with no labels behind them yet: shown, compared if labelled, never called scored.
+EXPERIMENTAL_PHASES: tuple[str, ...] = ("shaft_parallel",)
 
 
 @dataclass(frozen=True)

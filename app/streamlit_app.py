@@ -15,7 +15,8 @@ from pathlib import Path
 
 import streamlit as st
 
-from swing.demo import (analyze, apply_ball_cue, ball_cue_cached, find_clips, hand_figure, metric_table,
+from swing.demo import (analyze, apply_ball_cue, apply_shaft_cue, ball_cue_cached, find_clips, hand_figure,
+                        metric_table, shaft_cue_cached,
                         overlay_rgb, phase_table, safe_clip_name, save_upload, slowdown_scan,
                         usable_keypoint_files)
 from swing.io import cached_jpeg_frames, load_jpeg_frames, probe_video, store_jpeg_frames
@@ -157,6 +158,11 @@ use_ball = st.sidebar.checkbox(
          "Wrist tracking alone can be several frames off. Needs a visible ball and a fairly steady camera; "
          "if no ball is found, impact stays hand-based and the page says why. Reads the video the first "
          "time (tens of seconds); the answer is remembered.")
+use_shaft = st.sidebar.checkbox(
+    "Estimate shaft-parallel (experimental)", False,
+    help="Finds the club shaft in the picture and estimates the frame it is level with the hands in the "
+         "backswing. Experimental and unvalidated: the shaft is often motion-blurred right where it crosses "
+         "horizontal, so the page shows the bracket the estimate comes from. Off by default.")
 
 data = pick_saved() if mode == "Saved analysis" else pick_upload()
 if data is None:
@@ -182,6 +188,9 @@ _four = [a.phases.frames.get(p) for p in ("address", "takeaway", "top", "impact"
 if use_ball and None not in _four and all(x < y for x, y in zip(_four, _four[1:])):
     with st.spinner("Looking for the ball in the video (first time only; the answer is remembered)..."):
         a = apply_ball_cue(a, ball_cue_cached(data["video"], a, CUE_CACHE))
+if use_shaft and a.phases.frames.get("takeaway") is not None and a.phases.frames.get("top") is not None:
+    with st.spinner("Looking for the club shaft in the backswing (experimental; first time only)..."):
+        a = apply_shaft_cue(a, shaft_cue_cached(data["video"], a, CUE_CACHE))
 MIN_FPS = PhaseParams().min_fps
 if fps_used < MIN_FPS:
     st.error(f"This clip's timeline is {fps_used:.1f} fps, below the {MIN_FPS:.0f} fps the phase rules "
@@ -260,6 +269,8 @@ with tab_phases:
     st.dataframe(phase_table(a), hide_index=True, use_container_width=True)
     if use_ball:
         (st.success if a.impact_from_ball else st.caption)(f"Impact: {a.impact_note}.")
+    if use_shaft:
+        st.caption(f"Shaft-parallel (experimental, unvalidated): {a.shaft_note or 'not estimated'}.")
     st.markdown(
         "**top** = highest hands before peak hand speed; **impact** = the first frame the ball leaves the tee "
         "when a ball is found in the picture, otherwise the lowest hands shortly after the peak speed. "

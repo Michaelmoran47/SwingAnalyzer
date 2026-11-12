@@ -17,11 +17,15 @@ _LEFT, _RIGHT = {2424832, 65361, 63234}, {2555904, 65363, 63235}
 _UP, _DOWN = {2490368, 65362, 63232}, {2621440, 65364, 63233}
 _PGUP, _PGDN = {2162688, 65365}, {2228224, 65366}
 
+# Keys 1-5 keep their original meaning; 6 is the (experimental) shaft-parallel checkpoint.
+KEY_ORDER = ("address", "takeaway", "top", "impact", "finish", "shaft_parallel")
+assert set(KEY_ORDER) == set(PHASES)
+
 HELP = [
     "left/right or a/d : +-1 frame",
     "up/down or w/s    : +-10 frames",
     "PgUp/PgDn or q/e  : +-50 frames",
-    "1-5 set label: " + " ".join(f"{i + 1}={p}" for i, p in enumerate(PHASES)),
+    "1-6 set label: " + " ".join(f"{i + 1}={p}" for i, p in enumerate(KEY_ORDER)),
     "backspace: clear label here | u: undo",
     "k: toggle skeleton | h: toggle help | Esc: save & quit",
 ]
@@ -67,10 +71,12 @@ def run(video: str | Path, label_path: str | Path | None = None,
         if here:
             _text(frame, f"LABEL: {here.upper()}", (10, 58), (0, 255, 255), 0.8)
         y = 90
-        for p in PHASES:
+        for n, p in enumerate(KEY_ORDER):
             f = labels.labels.get(p)
-            _text(frame, f"{PHASES.index(p) + 1} {p}: {'-' if f is None else f}", (10, y),
-                  (0, 255, 0) if f is not None else (180, 180, 180), 0.5)
+            rng = labels.ranges.get(p)
+            shown = f"{rng[0]}-{rng[1]}" if rng and f is None else ("-" if f is None else f)
+            _text(frame, f"{n + 1} {p}: {shown}", (10, y),
+                  (0, 255, 0) if (f is not None or rng) else (180, 180, 180), 0.5)
             y += 22
         for msg in labels.problems():
             _text(frame, "! " + msg, (10, y), (0, 0, 255), 0.5)
@@ -88,8 +94,8 @@ def run(video: str | Path, label_path: str | Path | None = None,
         elif key in _DOWN or key == ord("s"): step = 10
         elif key in _PGUP or key == ord("q"): step = -50
         elif key in _PGDN or key == ord("e"): step = 50
-        elif ord("1") <= key <= ord(str(len(PHASES))):
-            labels.set(PHASES[key - ord("1")], idx)
+        elif ord("1") <= key <= ord(str(len(KEY_ORDER))):
+            labels.set(KEY_ORDER[key - ord("1")], idx)
             save()
         elif key in (8, 127, 3014656):  # backspace / delete
             here = labels.phase_at(idx)
