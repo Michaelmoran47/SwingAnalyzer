@@ -13,7 +13,7 @@ def test_errors_and_validated_flag():
     assert rows["top"].error_frames == 3 and rows["top"].error_ms == pytest.approx(12.5)
     assert rows["impact"].error_frames == -4
     assert rows["finish"].error_frames is None and rows["finish"].error_ms is None
-    assert {p for p, e in rows.items() if e.validated} == set(VALIDATED_PHASES) == {"top", "impact"}
+    assert {p for p, e in rows.items() if e.validated} == set(VALIDATED_PHASES) == {"takeaway", "top", "impact"}
 
 
 def test_missing_label_gives_no_error():

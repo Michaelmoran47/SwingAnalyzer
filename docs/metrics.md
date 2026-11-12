@@ -33,7 +33,7 @@ median pose over the 0.2 s ending at the address frame. Directions come from the
 keypoints at address, not from assumptions about where the camera is.
 
 - **Tempo**: backswing = takeaway→top, downswing = top→impact, ratio = backswing /
-  downswing. Takeaway is threshold-defined ([phase_definitions.md](phase_definitions.md)),
+  downswing. Takeaway comes from whole-body motion ([phase_definitions.md](phase_definitions.md)),
   so the ratio depends on that rule; quote the rule with the number.
 - **Spine angle**: angle of the hip-mid→shoulder-mid line from vertical, in the
   image plane, degrees, unsigned.

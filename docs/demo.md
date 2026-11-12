@@ -78,7 +78,7 @@ answer is remembered in `outputs/.cue_cache/`. Switch it off to skip reading the
 ## What the page says about trust
 
 The banner and tables repeat what the docs say: one swing, 2D geometry, only top and
-impact compared with hand labels, address/takeaway/finish threshold-defined, metrics with
+impact compared with hand labels, address and finish threshold-defined, metrics with
 no reference measurement, confidence not an error flag. Metrics that cannot be measured
 from the chosen camera view are listed as unavailable with the reason. You choose the
 view (down-the-line or face-on); the app does not guess it.

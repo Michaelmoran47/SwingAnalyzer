@@ -31,6 +31,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from swing.phases.onset import body_motion_onset
 from swing.pose.base import J, PoseSequence
 
 
@@ -51,6 +52,11 @@ class PhaseParams:
     # clip that was slowed down (or a detection that went wrong), not to judge a swing.
     backswing_range_s: tuple[float, float] = (0.2, 3.0)  # takeaway to top
     downswing_range_s: tuple[float, float] = (0.08, 1.5)  # top to impact
+    # Takeaway from whole-body motion (phases/onset.py) instead of the wrists alone. The wrist
+    # rule came out 37-96 frames late on three hand-labelled swings.
+    body_onset: bool = True
+    onset_kappa: float = 3.0  # quiet = pooled speed within this many times the clip's noise level
+    onset_quiet_s: float = 0.10  # length of the quiet stretch that must precede the swing
 
 
 @dataclass
@@ -59,6 +65,7 @@ class PhaseResult:
     fps: float
     warnings: list[str] = field(default_factory=list)
     plausible: bool = True  # False when the detected timings do not look like a real-time swing
+    sources: dict[str, str] = field(default_factory=dict)  # where a non-default phase frame came from
 
     def time_s(self, phase: str) -> float | None:
         f = self.frames.get(phase)
@@ -193,11 +200,14 @@ def detect_phases_from_hands(
     issues = plausibility_issues(frames, fps, p)
     if issues:
         res.plausible = False
-        warn.append(
-            "these timings do not look like a real-time swing (" + "; ".join(issues) + "). If the clip "
+        warn.append(_plausibility_message(issues))
+    return res
+
+
+def _plausibility_message(issues: list[str]) -> str:
+    return ("these timings do not look like a real-time swing (" + "; ".join(issues) + "). If the clip "
             "was recorded in slow motion and re-timed to play slowly, give the capture frame rate "
             "you recorded at (CLI --fps; in the demo, the 'Capture frame rate' control)")
-    return res
 
 
 def plausibility_issues(frames: dict[str, int | None], fps: float,
@@ -232,6 +242,21 @@ def detect_phases(seq: PoseSequence, params: PhaseParams = PhaseParams()) -> Pha
     hands = hand_signal(seq, params.max_gap_s)
     torso = torso_length(seq)
     res = detect_phases_from_hands(hands, seq.fps, torso, params)
+    f = res.frames
+    if params.body_onset and f.get("takeaway") is not None and f.get("top") is not None:
+        onset = body_motion_onset(seq.keypoints, seq.fps, f["takeaway"], f["top"],
+                                  params.onset_kappa, params.onset_quiet_s)
+        if onset is not None and onset <= f["takeaway"]:
+            f["takeaway"] = onset
+            f["address"] = max(0, onset - 1)  # the last still frame
+            res.sources["takeaway"] = "body motion (shoulders, hips, arms)"
+            res.warnings = [w for w in res.warnings if not w.startswith("these timings do not look like")]
+            issues = plausibility_issues(f, seq.fps, params)
+            res.plausible = not issues
+            if issues:
+                res.warnings.append(_plausibility_message(issues))
+        else:
+            res.sources["takeaway"] = "hands (no quiet stretch found before the swing)"
     # frames are indices into the sequence; shift to video frame indices
     res.frames = {k: (None if v is None else v + seq.start_frame) for k, v in res.frames.items()}
     return res

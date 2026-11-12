@@ -1,0 +1,10 @@
+{
+  "video": "IMG_6003.mov",
+  "fps": 29.93385632979541,
+  "frame_count": 1947,
+  "labels": {
+    "takeaway": 1153,
+    "top": 1385
+  },
+  "notes": "Stated by the user in chat: takeaway 1153, top 1385. Re-timed clip: stamped ~30 fps, capture rate believed to be 240."
+}

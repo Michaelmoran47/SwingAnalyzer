@@ -137,9 +137,9 @@ def save_panel(data, jpegs, scale):
 
 st.title("Swing Analyzer")
 st.warning(
-    "**Unvalidated demo.** Built and checked on one swing. Everything here is 2D image-plane "
-    "geometry from pose keypoints, not a coaching verdict. Only *top* and *impact* are compared "
-    "with hand labels; address, takeaway and finish follow threshold rules; metrics have no "
+    "**Unvalidated demo.** Built and checked on three swings. Everything here is 2D image-plane "
+    "geometry from pose keypoints, not a coaching verdict. Takeaway, top and impact were compared "
+    "with hand labels on those swings; address and finish follow threshold rules; metrics have no "
     "reference measurement. Pose confidence is not a reliable error flag."
 )
 
@@ -263,9 +263,11 @@ with tab_phases:
     st.markdown(
         "**top** = highest hands before peak hand speed; **impact** = the first frame the ball leaves the tee "
         "when a ball is found in the picture, otherwise the lowest hands shortly after the peak speed. "
-        "**address**, **takeaway** and **finish** are set by speed/displacement thresholds on the wrist "
-        "trajectory (see `docs/phase_definitions.md`), so they can differ from what a person would pick "
-        "by 0.1 to 0.4 s on the one labelled swing. Phases the rules cannot find are blank, not guessed."
+        "**takeaway** = the start of the swing: the end of the last quiet stretch before it, measured from the "
+        "motion of the shoulders, hips and arms against this clip's own noise (it falls back to the wrists if no "
+        "quiet stretch is found); **address** = the frame before it. **finish** is a speed threshold on the wrists "
+        "and can differ from what a person would pick by 0.1 to 0.4 s. A waggle before the swing counts as "
+        "movement. Phases the rules cannot find are blank, not guessed (see `docs/phase_definitions.md`)."
     )
     for w in a.phases.warnings:
         st.caption(f"note: {w}")
@@ -295,12 +297,13 @@ with tab_about:
     st.markdown(
         f"""
 **Pipeline:** video → pose keypoints (`{data['backend']}`) → gap filling and zero-phase smoothing →
-rule-based phase detection from the wrists → view-aware metrics.
+rule-based phase detection from the wrists and body motion → view-aware metrics.
 
 **What is and is not checked** (details in the repo's `docs/`):
-- One swing, one camera angle, one annotator. Nothing here is an accuracy result.
-- Top and impact came within about 17 ms of hand labels on that swing.
-- Address, takeaway and finish are threshold-defined and were not scored.
+- Three swings, two golfers, one annotator. Nothing here is an accuracy result.
+- On those swings top was within 7 frames of the hand labels, impact within 0 frames when the ball cue
+  applied, and takeaway within 15-28 frames (it was 37-96 frames late before it used body motion).
+- Address and finish are threshold-defined and were not scored.
 - Metrics are unit-tested on synthetic skeletons, not validated against measurements.
 - Rotation values are 2D proxies, not angles.
 

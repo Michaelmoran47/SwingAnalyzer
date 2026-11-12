@@ -31,36 +31,32 @@ code uses (see `swing info`), not the header frame count.
 
 ## What needs labelling
 
-Label **top** and **impact**. They are the phases the detector is scored on.
-Address, takeaway and finish are gradual events that the detector defines by
-threshold (see [phase_definitions.md](phase_definitions.md)); you may still
-label them for reference, but they are not scored.
+Label **takeaway**, **top** and **impact**: the phases the detector is scored on. Address and
+finish are gradual events defined by threshold (see [phase_definitions.md](phase_definitions.md));
+you may label them for reference, but they are not scored.
+
+If the golfer **pauses at the top**, any frame in the pause is correct. Record it as a range by
+editing the label JSON, for example `"ranges": {"top": [190, 250]}`; the scorer then counts any
+detected frame inside the range as zero error. (The label tool marks single frames only.)
 
 ## Definitions
 
-**All phases are defined by the hands (the grip / wrists), not the club head or
-the body.** The pose model tracks wrists, not the club, and the detector uses
-the wrist trajectory, so the labels have to mean the same thing. Watch the
-golfer's hands and ignore the club head, even when it moves first.
+Work with +-1 frame (about 4 ms at 240 fps) in mind: pick a rule and apply it the same way each time.
 
-Work with ±1 frame (about 4 ms at 240 fps) in mind: pick a rule and apply it
-the same way each time.
+1. **address**: the last frame where everything is still, just before the swing starts.
+2. **takeaway**: **the start of the swing**: the first frame where the club or body clearly moves
+   away from the set position. This is not the shaft-parallel position; shaft-parallel (the end
+   of the takeaway in coaching language, "toe-up" in swing datasets) is its own checkpoint and
+   is not marked in this project yet.
+3. **top**: the top of the backswing, where it stops and the downswing begins. If the golfer pauses,
+   any frame in the pause is acceptable (see ranges above).
+4. **impact**: the frame where the club head contacts the ball. If contact falls between two frames,
+   take the later frame (the first where the ball has visibly moved, or the club is past the ball).
+5. **finish**: the first frame where the follow-through is complete and the golfer holds a stable
+   finish, even if the club is still settling.
 
-1. **address**: the last frame where the hands are still before the backswing
-   begins. Slow creeping counts as moving; if the hands are visibly drifting,
-   you are past address.
-2. **takeaway**: the first frame where the hands have clearly moved away from
-   their address position. The club head will already be moving; ignore it.
-3. **top**: the frame where the hands reach their highest point (smallest
-   height in the image) before the downswing.
-4. **impact**: the frame where the club head contacts the ball. If contact falls
-   between two frames, take the later frame. (The one phase read from the ball,
-   because the hands' position there is only a proxy.)
-5. **finish**: the first frame where the hands stop (no longer rising or
-   drifting) in the follow-through, even if the club and body are still settling.
-
-Phases must be in this order with strictly increasing frame numbers; the tool
-flags violations in red.
+Phases must be in this order with strictly increasing frame numbers; the tool flags violations
+in red.
 
 ## Notes
 

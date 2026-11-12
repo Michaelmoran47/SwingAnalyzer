@@ -158,6 +158,18 @@ def slowdown_scan(seq: PoseSequence, view: str, window_s: float = 0.06, min_conf
     return rows
 
 
+def _phase_source(a: Analysis, phase: str) -> str:
+    """Where a phase frame came from, for the table."""
+    if phase == "impact":
+        return "the ball leaving the tee (picture)" if a.impact_from_ball else "the hands"
+    src = a.phases.sources.get("takeaway", "")
+    if phase == "takeaway":
+        return src or "the hands"
+    if phase == "address":
+        return "the frame before the takeaway" if src.startswith("body motion") else "the hands"
+    return "the hands"
+
+
 def phase_table(a: Analysis) -> list[dict]:
     errs = {e.phase: e for e in compare(a.phases, a.labels)} if a.labels else {}
     rows = []
@@ -170,9 +182,8 @@ def phase_table(a: Analysis) -> list[dict]:
             "time (s)": None if f is None else round(f / a.smooth.fps, 3),
             "status": "scored against your hand labels (one swing)" if p in VALIDATED_PHASES
                       else "threshold-defined (not scored)",
-            "from": ("the ball leaving the tee (picture)" if a.impact_from_ball else "the hands")
-                    if p == "impact" else "the hands",
-            "your label": None if e is None else e.labelled,
+            "from": _phase_source(a, p),
+            "your label": None if e is None else (e.label_text if e.acceptable else e.labelled),
             "error (ms)": None if e is None or e.error_ms is None else round(e.error_ms, 1),
         })
     return rows

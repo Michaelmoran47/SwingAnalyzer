@@ -76,12 +76,12 @@ def _cmd_phases(args: argparse.Namespace) -> int:
         res, ball_note = refine_impact(res, ball_cue(args.video, seq, res.frames))
     labels = PhaseLabels.load(args.labels) if args.labels else None
     rows = {e.phase: e for e in compare(res, labels)} if labels else {}
-    print(f"{'phase':10} {'frame':>6} {'time_s':>7}" + (f" {'label':>6} {'err_fr':>7} {'err_ms':>8}  scored" if labels else ""))
+    print(f"{'phase':10} {'frame':>6} {'time_s':>7}" + (f" {'label':>7} {'err_fr':>7} {'err_ms':>8}  scored" if labels else ""))
     for ph, f in res.frames.items():
         line = f"{ph:10} {'-' if f is None else f:>6} {'-' if f is None else format(f / seq.fps, '.3f'):>7}"
         if labels:
             e = rows[ph]
-            line += (f" {'-' if e.labelled is None else e.labelled:>6}"
+            line += (f" {e.label_text:>7}"
                      f" {'-' if e.error_frames is None else format(e.error_frames, '+d'):>7}"
                      f" {'-' if e.error_ms is None else format(e.error_ms, '+.1f'):>8}"
                      f"  {'yes' if e.validated else 'no (threshold-defined)'}")

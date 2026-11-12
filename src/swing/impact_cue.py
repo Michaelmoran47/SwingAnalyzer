@@ -9,7 +9,7 @@ Method (parameters set from geometry, not tuned on clips):
 1. Search region: near the feet, extending toward the ball (the side the hands are on at
    address) out to ~3 torso lengths.
 2. Candidates: small bright round blobs in a background image built from the *late backswing*
-   (club far from the ball, ball still on the tee). At address the club head touches the ball
+   (the last 40 % before the top: club far from the ball, ball still on the tee). At address the club head touches the ball
    and merges with it into one odd-shaped blob, so the address frames cannot be used. A ball is
    ~0.06-0.09 torso lengths across; candidates are sized 0.04-0.14.
 3. Which blob is the ball: the one that looks like "ball there" before the swing and like
@@ -252,8 +252,9 @@ def ball_cue(video, seq: PoseSequence, frames: dict[str, int | None]) -> BallCue
     if None in (a, tk, top, imp) or not a < tk < top < imp:
         return BallCue(None, note="needs address, takeaway, top and impact (in order) to know where to look")
     down, back = imp - top, top - tk
-    # clean frames: the second half of the backswing, club well away from the ball
-    w0, w1 = tk + int(0.5 * back), top - 2
+    # clean frames: the last 40 % of the backswing (anchored on the top, which is the most
+    # reliable phase), club well away from the ball
+    w0, w1 = top - max(8, int(0.4 * back)), top - 2
     if w1 - w0 + 1 < 6:
         return BallCue(None, note=f"backswing too short ({back} frames) to get ball frames without the club")
     end = min(len(seq) - 1, imp + int(0.8 * down) + 5)

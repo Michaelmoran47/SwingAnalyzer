@@ -11,8 +11,8 @@ option (on by default).
 
 1. **Search region.** Near the feet, extending toward the ball (the side the hands are on at
    address) out to about 3 torso lengths. The ball was 2.1 torso lengths away on the recording.
-2. **Clean background.** The median of the second half of the backswing: the club is far from
-   the ball but the ball is still on the tee. At address the club head touches the ball and merges
+2. **Clean background.** The median of the last 40 % of the backswing before the top (anchored on
+   the top, the most reliable phase): the club is far from the ball but the ball is still on the tee. At address the club head touches the ball and merges
    with it into one odd-shaped blob, so address frames cannot be used.
 3. **Candidates.** Small bright round blobs, 0.04 to 0.14 torso lengths across, found with a
    top-hat filter. A blob's extent is taken at half its own peak response (a fixed threshold let
