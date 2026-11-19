@@ -15,3 +15,6 @@ outputs/
 *.mov
 *.MOV
 *.npz
+
+# third-party datasets (labels etc.): local only
+data/external/
